@@ -1,0 +1,299 @@
+/* Base container styles */
+.wp-ai-workflows-container {
+    position: relative;
+    min-height: 50px;
+    margin: 20px 0;
+}
+
+/* Loading States */
+.wp-ai-workflows-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Skeleton Loading */
+.wp-ai-workflows-skeleton {
+    padding: 20px;
+}
+
+.skeleton-line {
+    height: 16px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
+@keyframes loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Loading Overlay (for 'previous' mode) */
+.wp-ai-workflows-container.loading-overlay {
+    position: relative;
+}
+
+.wp-ai-workflows-container.loading-overlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+}
+
+.loading-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 2;
+    display: flex;
+    gap: 4px;
+}
+
+.loading-indicator span {
+    width: 8px;
+    height: 8px;
+    background: #3498db;
+    border-radius: 50%;
+    animation: pulse 1.4s infinite;
+}
+
+.loading-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.loading-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+    0%, 60%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    30% {
+        transform: scale(1.5);
+        opacity: 0.5;
+    }
+}
+
+/* Output Content */
+.wp-ai-workflows-output-content {
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    position: relative;
+}
+
+.output-timestamp {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+/* Format-specific styles */
+.json-output {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    padding: 15px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.text-output {
+    background: white;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    margin: 0;
+}
+
+.markdown-output {
+    background: white;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+.markdown-output h1, 
+.markdown-output h2, 
+.markdown-output h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.markdown-output code {
+    background: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 90%;
+}
+
+.auto-output {
+    padding: 10px 0;
+}
+
+/* Error State */
+.wp-ai-workflows-error {
+    padding: 20px;
+    background: #fee;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    color: #c33;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.error-icon {
+    font-size: 20px;
+}
+
+/* Empty State */
+.wp-ai-workflows-empty {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+    background: #fafafa;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+}
+
+/* Theme: Dark */
+.wp-ai-workflows-theme-dark .wp-ai-workflows-output-content {
+    background: #2d2d2d;
+    color: #f8f8f2;
+    border-color: #444;
+}
+
+.wp-ai-workflows-theme-dark .text-output,
+.wp-ai-workflows-theme-dark .markdown-output,
+.wp-ai-workflows-theme-dark .auto-output {
+    background: #3a3a3a;
+    color: #f8f8f2;
+    border-color: #555;
+}
+
+.wp-ai-workflows-theme-dark .output-timestamp {
+    color: #aaa;
+}
+
+.wp-ai-workflows-theme-dark .wp-ai-workflows-loading {
+    color: #ccc;
+}
+
+.wp-ai-workflows-theme-dark .loading-spinner {
+    border-color: #444;
+    border-top-color: #61dafb;
+}
+
+.wp-ai-workflows-theme-dark.loading-overlay::after {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Theme: Minimal */
+.wp-ai-workflows-theme-minimal .wp-ai-workflows-output-content {
+    background: transparent;
+    border: none;
+    padding: 10px 0;
+}
+
+.wp-ai-workflows-theme-minimal .wp-ai-workflows-loading {
+    padding: 20px 0;
+}
+
+.wp-ai-workflows-theme-minimal .loading-spinner {
+    width: 30px;
+    height: 30px;
+    border-width: 2px;
+}
+
+.wp-ai-workflows-theme-minimal .skeleton-line {
+    height: 12px;
+    margin-bottom: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .wp-ai-workflows-output-content {
+        padding: 15px;
+    }
+    
+    .json-output,
+    .text-output {
+        font-size: 12px;
+        padding: 10px;
+    }
+}
+
+/* Custom loading hook */
+.wp-ai-workflows-loading-custom {
+    /* Users can override this for custom loading animations */
+    min-height: 100px;
+}
+
+/* Session type indicators */
+.wp-ai-workflows-container[data-session-type="public"]::before {
+    content: "Public Session";
+    position: absolute;
+    top: -20px;
+    right: 0;
+    font-size: 11px;
+    color: #666;
+    background: #f0f0f0;
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.wp-ai-workflows-container[data-session-type="private"]::before {
+    content: "Private Session";
+    background: #e3f2fd;
+    color: #1976d2;
+}

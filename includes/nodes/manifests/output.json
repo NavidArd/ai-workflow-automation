@@ -1,0 +1,39 @@
+{
+  "type": "output",
+  "label": "Output",
+  "category": "Core",
+  "description": "Terminal node that delivers workflow results. Can display on-screen, save to a database table, expose a shortcode/HTML, POST to a webhook, or write to Google Sheets / Google Drive.",
+  "capabilities": ["display result", "save to database", "shortcode/HTML", "webhook delivery", "Google Sheets", "Google Drive"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "outputType", "type": "enum", "required": true, "default": "display",
+      "options": ["display", "save", "html", "webhook", "googleSheets", "googleDrive"],
+      "description": "Where the result is delivered. display/webhook run in Cloud; save/database/shortcode/post are rewritten to a wpAction; googleSheets/googleDrive run Locally only." },
+    { "name": "delayEnabled", "type": "boolean", "required": false, "description": "Delay delivery." },
+    { "name": "delayValue", "type": "number", "required": false, "description": "Delay amount." },
+    { "name": "delayUnit", "type": "enum", "required": false, "options": ["minutes", "hours", "days"], "description": "Delay unit." },
+    { "name": "selectedTable", "type": "string", "required": false, "description": "Target table name when outputType is save." },
+    { "name": "columns", "type": "array", "required": false, "description": "Column definitions for the save table." },
+    { "name": "fieldMappings", "type": "object", "required": false, "description": "Maps table fields to node inputs." },
+    { "name": "webhookUrl", "type": "string", "required": false, "supportsVariables": true, "description": "Target URL when outputType is webhook." },
+    { "name": "webhookKeys", "type": "array", "required": false, "description": "Key mapping objects for the webhook payload." },
+    { "name": "selectedSpreadsheet", "type": "string", "required": false, "description": "Google Sheets spreadsheet id." },
+    { "name": "selectedSheetTab", "type": "string", "required": false, "description": "Google Sheets tab id." },
+    { "name": "columnMappings", "type": "object", "required": false, "description": "Maps sheet columns to node inputs." },
+    { "name": "selectedDriveFolder", "type": "string", "required": false, "description": "Google Drive folder id." },
+    { "name": "driveFileName", "type": "string", "required": false, "supportsVariables": true, "description": "Google Drive file name." },
+    { "name": "driveFileFormat", "type": "enum", "required": false, "options": ["txt", "docx", "csv", "pdf"], "description": "Google Drive file format." }
+  ],
+  "inputs": ["main"],
+  "outputs": [],
+  "example": { "nodeName": "Show Result", "outputType": "display" },
+  "keywords": ["output", "display", "save", "webhook", "sheets", "drive", "result"],
+  "contract": {
+    "produces": { "kind": "terminal", "cardinality": "single", "reference": "[Input from {id}]", "note": "Workflow endpoint. `display` just shows [Input from upstream]." },
+    "consumes": {
+      "multiField": { "field": "fieldMappings", "requiredKeys": [], "optionalKeys": [] },
+      "note": "For outputType `save` (fieldMappings) or `googleSheets` (columnMappings), each column maps to its OWN upstream field — same shape rules as the Post node. For `display`/`webhook` a single [Input from upstream] blob is fine."
+    }
+  }
+}

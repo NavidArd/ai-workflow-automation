@@ -1,0 +1,25 @@
+{
+  "type": "research",
+  "label": "AI Research",
+  "category": "AI Actions",
+  "description": "Runs online research on a query using Perplexity Sonar models and returns a sourced answer. A high-cost node — it performs live web research.",
+  "capabilities": ["online research", "web-grounded answers", "Perplexity Sonar"],
+  "modes": ["local", "cloud"],
+  "credits": 40,
+  "config": [
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true,
+      "description": "The research question or topic." },
+    { "name": "model", "type": "enum", "required": false, "default": "sonar",
+      "options": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro", "sonar-deep-research"],
+      "description": "Perplexity research model." },
+    { "name": "maxTokens", "type": "number", "required": false, "default": 2048, "description": "Response length limit (1-4096)." },
+    { "name": "temperature", "type": "number", "required": false, "default": 1.0, "description": "Sampling temperature (0.0-2.0)." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Market Research", "content": "Latest trends in [[topic] from trigger-1]", "model": "sonar-pro" },
+  "keywords": ["research", "perplexity", "web", "search", "sonar", "ai"],
+  "contract": {
+    "produces": { "kind": "text", "cardinality": "single", "namedFields": false, "jsonExtractable": true, "reference": "[Input from {id}]", "note": "Produces one sourced text answer. A [[field] from {id}] reference resolves only if this node is instructed to emit strict JSON with that key." }
+  }
+}

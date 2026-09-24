@@ -1,0 +1,23 @@
+{
+  "type": "MCPClient",
+  "label": "Connect an App",
+  "category": "Data Processing",
+  "description": "Connect one of 2,700+ apps (Slack, Google Sheets, Notion, Gmail, Airtable, HubSpot…) through Pipedream's managed auth, pick one of its actions, and run it on your own connected account. The action's fields load dynamically and support variable tags.",
+  "capabilities": ["app actions via Pipedream Connect", "managed OAuth (your own account)", "dynamic action fields", "2,700+ third-party integrations"],
+  "modes": ["local", "cloud"],
+  "credits": 1,
+  "config": [
+    { "name": "appSlug", "type": "string", "required": true, "description": "Selected Pipedream app key/slug (e.g. slack, google_sheets, notion)." },
+    { "name": "toolName", "type": "string", "required": true, "description": "Selected action name (e.g. google_sheets-add-single-row, slack-send-message)." },
+    { "name": "toolConfig", "type": "object", "required": false, "description": "Values for the action's dynamic fields. String fields support variable tags." },
+    { "name": "authStatus", "type": "string", "required": false, "description": "Connection state of the user's account for this app (connected|expired|error|none)." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Add row to Sheet", "appSlug": "google_sheets", "toolName": "google_sheets-add-single-row", "toolConfig": { "sheetId": "1AbC…", "worksheet": "Sheet1", "row": "[Input from aiModel-1]" } },
+  "keywords": ["apps", "pipedream", "integration", "connect", "slack", "google sheets", "notion", "gmail", "airtable", "action", "connector"],
+  "contract": {
+    "produces": { "kind": "structured", "cardinality": "single", "namedFields": true, "jsonExtractable": true, "reference": "[Input from {id}] for the whole action result; [[<field>] from {id}] for a field of the action's JSON result" },
+    "consumes": { "note": "Each toolConfig field is a distinct input and supports variable tags." }
+  }
+}

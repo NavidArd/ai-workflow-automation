@@ -1,0 +1,24 @@
+{
+  "type": "parser",
+  "label": "Document Parser",
+  "category": "Data Processing",
+  "description": "Parses documents (from a URL or uploaded files) into text, with language and parsing-instruction controls for tables, columns, and target pages.",
+  "capabilities": ["document parsing", "PDF/office extraction", "table and column handling"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "inputType", "type": "enum", "required": true, "default": "link",
+      "options": ["link", "upload"], "description": "Parse a document by URL or by uploaded file." },
+    { "name": "documentLink", "type": "string", "required": false, "supportsVariables": true, "description": "Document URL when inputType is link." },
+    { "name": "uploadedFiles", "type": "array", "required": false, "description": "Uploaded file objects when inputType is upload." },
+    { "name": "parserSettings", "type": "object", "required": false,
+      "description": "language, parsingInstructions, skipDiagonalText, doNotUnrollColumns, targetPages." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Parse PDF", "inputType": "link", "documentLink": "https://example.com/report.pdf" },
+  "keywords": ["parser", "parse", "document", "pdf", "extract", "ocr"],
+  "contract": {
+    "produces": { "kind": "text", "cardinality": "single", "namedFields": false, "jsonExtractable": false, "reference": "[Input from {id}]", "note": "Ingests a DOCUMENT (URL or uploaded file) and produces its extracted text as one blob. It does NOT split text into named fields — for that, use an AI Extract Information node downstream." }
+  }
+}

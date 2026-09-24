@@ -1,0 +1,20 @@
+{
+  "type": "sentimentAnalysis",
+  "label": "AI Sentiment Analysis",
+  "category": "AI Actions",
+  "description": "Analyzes the sentiment of the provided text and returns a sentiment classification.",
+  "capabilities": ["sentiment classification", "text analysis"],
+  "modes": ["local", "cloud"],
+  "credits": 1,
+  "config": [
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true,
+      "description": "Text to analyze for sentiment." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Analyze Feedback", "content": "[Input from trigger-1]" },
+  "keywords": ["sentiment", "analysis", "emotion", "positive", "negative", "ai"],
+  "contract": {
+    "produces": { "kind": "text", "cardinality": "single", "namedFields": false, "jsonExtractable": true, "reference": "[Input from {id}]", "note": "Produces one sentiment classification as text (e.g. positive/negative/neutral). Good upstream for a Condition node." }
+  }
+}

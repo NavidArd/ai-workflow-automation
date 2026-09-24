@@ -1,0 +1,31 @@
+{
+  "type": "post",
+  "label": "Create Post/Product",
+  "category": "Content & Media",
+  "description": "Creates or updates a WordPress post, page, custom post type, or WooCommerce product, mapping workflow data to post fields, custom fields, and ACF fields.",
+  "capabilities": ["create/update posts", "custom post types", "WooCommerce products", "ACF and custom fields", "scheduling"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "selectedPostType", "type": "string", "required": true, "description": "Post type slug (post, page, product, custom)." },
+    { "name": "postStatus", "type": "enum", "required": false, "default": "draft",
+      "options": ["draft", "publish", "private", "future"], "description": "Publication status." },
+    { "name": "fieldMappings", "type": "object", "required": true,
+      "description": "Maps WordPress fields (post_title, post_content, post_excerpt, custom/ACF/WooCommerce fields) to node inputs. Values support variable tags." },
+    { "name": "scheduledDate", "type": "string", "required": false, "description": "Publish date when postStatus is future." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Publish Blog", "selectedPostType": "post", "postStatus": "draft", "fieldMappings": { "post_title": "[[title] from aiModel-1]", "post_content": "[Input from aiModel-1]" } },
+  "keywords": ["post", "wordpress", "product", "woocommerce", "publish", "acf"],
+  "contract": {
+    "produces": { "kind": "terminal", "cardinality": "single", "reference": "[Input from {id}]", "note": "Returns the created post id/permalink; usually a workflow endpoint." },
+    "consumes": {
+      "multiField": { "field": "fieldMappings", "requiredKeys": ["post_title", "post_content"], "optionalKeys": ["post_excerpt"] },
+      "note": "post_title and post_content are DISTINCT required inputs. Feed EACH from its own upstream field. PREFERRED: one AI Prompt node with structuredOutput=true and an outputSchema field per target, referenced as [[key] from aiModel-x] (no bridge node). Otherwise: a separate AI Prompt node per field, OR named [[field]] outputs from an AI Extract Information node, OR a single AI Prompt node instructed to emit strict JSON referenced as [[key] from aiModel-x]. Do NOT wire one plain AI text blob (structuredOutput off) into multiple fields and invent [[title]]/[[excerpt]] tags it does not produce."
+    },
+    "constraints": [
+      "Every fieldMappings value must reference a REAL upstream output. A [[field] from X] value is valid only if X genuinely produces that named field (AI Prompt node with structuredOutput=true whose outputSchema defines that field, Extract Information field, chat action field, API Call field, form-trigger field) OR X is an AI node explicitly told to emit strict JSON with that key."
+    ]
+  }
+}

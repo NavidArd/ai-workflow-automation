@@ -1,0 +1,68 @@
+{
+  "type": "firecrawl",
+  "label": "Web Scraper (Firecrawl)",
+  "category": "Data Processing",
+  "description": "Turns the web into clean, AI-ready data via the Firecrawl v2 API. Five operations: scrape a single URL, crawl a whole site, map a site's URLs, run a web/news/image search, or run an Agent extraction (structured data from a prompt/schema — the v2 replacement for the deprecated /extract endpoint).",
+  "capabilities": ["single-page scraping", "site crawling", "URL discovery (map)", "web/news/image search", "agent structured extraction", "markdown/html/json/question/highlights output"],
+  "modes": ["local", "cloud"],
+  "credits": 5,
+  "config": [
+    { "name": "operation", "type": "enum", "required": true, "default": "scrape",
+      "options": ["scrape", "crawl", "map", "search", "agent"],
+      "description": "Which Firecrawl v2 operation to run." },
+
+    { "name": "url", "type": "string", "required": false, "supportsVariables": true,
+      "description": "Target / starting URL. Required for scrape, crawl and map." },
+    { "name": "query", "type": "string", "required": false, "supportsVariables": true,
+      "description": "Search query. Required for the search operation." },
+
+    { "name": "formats", "type": "array", "required": false, "default": ["markdown"],
+      "options": ["markdown", "html", "rawHtml", "links", "summary", "highlights", "json", "question", "screenshot"],
+      "description": "Scrape output formats (v2). `json` = structured extraction (uses jsonPrompt/jsonFields); `question` = a grounded natural-language answer (uses the question field); `highlights` = matching sentences/blocks." },
+    { "name": "onlyMainContent", "type": "boolean", "required": false, "default": true, "description": "Return only the main content area." },
+    { "name": "waitFor", "type": "number", "required": false, "description": "Delay (ms) before scraping to allow client-side rendering." },
+    { "name": "timeout", "type": "number", "required": false, "description": "Scrape timeout (ms)." },
+    { "name": "isMobile", "type": "boolean", "required": false, "description": "Use a mobile viewport/user-agent (scrape)." },
+    { "name": "includeTags", "type": "array", "required": false, "description": "HTML tags/selectors to include (scrape)." },
+    { "name": "excludeTags", "type": "array", "required": false, "description": "HTML tags/selectors to exclude (scrape)." },
+
+    { "name": "jsonPrompt", "type": "string", "required": false, "supportsVariables": true, "description": "Natural-language instructions for the `json` format's structured extraction." },
+    { "name": "jsonFields", "type": "array", "required": false, "description": "Schema fields ({ name, type }) for the `json` format; compiled into a JSON Schema." },
+    { "name": "question", "type": "string", "required": false, "supportsVariables": true, "description": "The question to answer against the page when the `question` format is selected." },
+
+    { "name": "limit", "type": "number", "required": false, "description": "Max pages to crawl (crawl)." },
+    { "name": "includePaths", "type": "array", "required": false, "description": "Only crawl URLs matching these path patterns (crawl)." },
+    { "name": "excludePaths", "type": "array", "required": false, "description": "Skip URLs matching these path patterns (crawl)." },
+    { "name": "crawlEntireDomain", "type": "boolean", "required": false, "description": "Follow links across the whole domain, including parent/sibling paths (crawl)." },
+    { "name": "sitemap", "type": "enum", "required": false, "default": "include", "options": ["include", "skip", "only"], "description": "How to use the site's sitemap.xml (crawl/map)." },
+    { "name": "maxDiscoveryDepth", "type": "number", "required": false, "description": "Max link-discovery depth from the start URL (crawl)." },
+
+    { "name": "mapSearch", "type": "string", "required": false, "supportsVariables": true, "description": "Filter discovered URLs by this term (map)." },
+    { "name": "mapLimit", "type": "number", "required": false, "description": "Max URLs to return (map)." },
+    { "name": "includeSubdomains", "type": "boolean", "required": false, "description": "Include subdomains in discovery (map)." },
+
+    { "name": "sources", "type": "array", "required": false, "default": ["web"], "options": ["web", "news", "images"], "description": "Which result sources to search (search)." },
+    { "name": "categories", "type": "array", "required": false, "description": "Optional category filters (search)." },
+    { "name": "searchLimit", "type": "number", "required": false, "description": "Max search results (search)." },
+    { "name": "searchScrape", "type": "boolean", "required": false, "description": "Also scrape full page content for each search result (search)." },
+    { "name": "location", "type": "string", "required": false, "supportsVariables": true, "description": "Geographic location bias for search results." },
+
+    { "name": "agentPrompt", "type": "string", "required": false, "supportsVariables": true, "description": "Extraction prompt for the Agent operation (v2 /agent — replaces the deprecated /extract)." },
+    { "name": "agentFields", "type": "array", "required": false, "description": "Schema fields ({ name, type }) for the Agent extraction; compiled into a JSON Schema." },
+    { "name": "agentUrls", "type": "array", "required": false, "supportsVariables": true, "description": "Optional seed URLs to ground the Agent extraction." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Scrape Page", "operation": "scrape", "url": "https://example.com/blog", "formats": ["markdown"], "onlyMainContent": true },
+  "keywords": ["scrape", "crawl", "map", "search", "agent", "firecrawl", "web", "extract", "html", "markdown", "v2"],
+  "contract": {
+    "produces": {
+      "kind": "structured",
+      "cardinality": "single",
+      "namedFields": true,
+      "jsonExtractable": true,
+      "reference": "[Input from {id}] for the main content; [[json.<field>] from {id}] or [[agent.<field>] from {id}] for structured extraction",
+      "note": "scrape/crawl/map/search return content referenced as [Input from {id}]. When formats include 'json' (or the Agent operation) the extracted object is reachable as [[json.<field>] from {id}] / [[agent.<field>] from {id}]."
+    }
+  }
+}

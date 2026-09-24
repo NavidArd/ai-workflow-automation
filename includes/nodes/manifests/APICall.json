@@ -1,0 +1,33 @@
+{
+  "type": "APICall",
+  "label": "API Call",
+  "category": "Data Processing",
+  "description": "Makes an HTTP request to an external API with configurable method, headers, query params, body, authentication, retries, JSONPath extraction, and response caching.",
+  "capabilities": ["HTTP requests", "authentication (basic/bearer/apiKey)", "retries", "JSONPath extraction", "response caching"],
+  "modes": ["local", "cloud"],
+  "credits": 1,
+  "config": [
+    { "name": "url", "type": "string", "required": true, "supportsVariables": true, "description": "API endpoint URL." },
+    { "name": "method", "type": "enum", "required": true, "default": "GET",
+      "options": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"], "description": "HTTP method." },
+    { "name": "headers", "type": "array", "required": false, "description": "Header objects { name, value }. Values support variable tags." },
+    { "name": "queryParams", "type": "array", "required": false, "description": "Query parameter objects { key, value }." },
+    { "name": "body", "type": "string", "required": false, "supportsVariables": true, "description": "Request body (string or JSON)." },
+    { "name": "auth", "type": "object", "required": false, "description": "Auth config: { type: none|basic|bearer|apiKey, settings }." },
+    { "name": "responseConfig", "type": "object", "required": false, "description": "timeout, retryCount (0-5), jsonPath, cacheResponse, cacheTime." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["status", "headers", "data", "extractedData"],
+  "example": { "nodeName": "Fetch Data", "url": "https://api.example.com/v1/items", "method": "GET", "auth": { "type": "bearer", "settings": { "bearer": { "token": "[[apiKey] from trigger-1]" } } } },
+  "keywords": ["api", "http", "rest", "request", "integration", "fetch"],
+  "contract": {
+    "produces": {
+      "kind": "structured",
+      "cardinality": "named",
+      "namedFields": true,
+      "fields": ["status", "headers", "data", "extractedData"],
+      "reference": "[[{field}] from {id}]",
+      "note": "Named outputs: status, headers, data (parsed body), extractedData (JSONPath result). Nested access like [[data.items] from {id}] is supported. Plain [Input from {id}] returns the whole response."
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "type": "sendEmail",
+  "label": "Send Email",
+  "category": "Communication",
+  "description": "Composes and sends an email via the site's mailer, with optional HTML body, CC/BCC, attachments, and a scheduled delay.",
+  "capabilities": ["send email", "HTML or plain text", "cc/bcc", "attachments", "scheduled delay"],
+  "modes": ["local", "cloud"],
+  "credits": 1,
+  "config": [
+    { "name": "to", "type": "string", "required": true, "supportsVariables": true, "description": "Recipient email address." },
+    { "name": "cc", "type": "string", "required": false, "supportsVariables": true, "description": "CC recipients." },
+    { "name": "bcc", "type": "string", "required": false, "supportsVariables": true, "description": "BCC recipients." },
+    { "name": "subject", "type": "string", "required": true, "supportsVariables": true, "description": "Email subject." },
+    { "name": "body", "type": "string", "required": true, "supportsVariables": true, "description": "Email content." },
+    { "name": "useHtml", "type": "boolean", "required": false, "description": "Send body as HTML." },
+    { "name": "attachments", "type": "array", "required": false, "description": "Attachment objects." },
+    { "name": "delayEnabled", "type": "boolean", "required": false, "description": "Delay sending." },
+    { "name": "delayValue", "type": "number", "required": false, "description": "Delay amount." },
+    { "name": "delayUnit", "type": "enum", "required": false, "options": ["minutes", "hours", "days"], "description": "Delay unit." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Notify", "to": "team@example.com", "subject": "New submission", "body": "[Input from aiModel-1]", "useHtml": true },
+  "keywords": ["email", "mail", "notify", "smtp", "send"],
+  "contract": {
+    "produces": { "kind": "terminal", "cardinality": "single", "reference": "[Input from {id}]", "note": "Sends the email; usually a workflow endpoint." },
+    "consumes": {
+      "distinctFields": ["to", "subject", "body"],
+      "note": "to, subject and body are distinct required inputs. body may be a single AI text blob ([Input from aiModel-x]); to/subject are usually short values from the trigger or a dedicated node. Reference upstream text as [Input from node-id] — do not invent [[field]] tags on plain AI nodes."
+    }
+  }
+}

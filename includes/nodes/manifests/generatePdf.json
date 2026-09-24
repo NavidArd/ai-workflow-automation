@@ -1,0 +1,42 @@
+{
+  "type": "generatePdf",
+  "label": "Generate PDF",
+  "category": "Content & Media",
+  "description": "Renders a polished PDF from a built-in template (invoice, report, letter, certificate, proposal, one-pager) or your own custom HTML/CSS. Rendering runs on the cloud render service and is metered in credits — the node calls it from your site, so a connected account is required.",
+  "capabilities": ["PDF generation", "templated documents", "custom HTML to PDF", "invoice/report/letter/certificate/proposal rendering"],
+  "modes": ["cloud"],
+  "credits": 2,
+  "config": [
+    { "name": "sourceMode", "type": "enum", "required": true, "default": "template",
+      "options": ["template", "custom"], "description": "Choose a built-in template or render your own custom HTML/CSS." },
+    { "name": "template", "type": "string", "required": false, "default": "invoice",
+      "options": ["invoice", "report", "letter", "certificate", "proposal", "one-pager"],
+      "description": "Built-in template id (used when sourceMode = template)." },
+    { "name": "templateData", "type": "object", "required": false, "supportsVariables": true,
+      "description": "Map of template field (dot-path) => value. Values may contain workflow variable tags; JSON values are parsed for array/object fields." },
+    { "name": "customHtml", "type": "string", "required": false, "supportsVariables": true,
+      "description": "Custom HTML/CSS document to render (used when sourceMode = custom). Scripts/iframes are stripped by the renderer." },
+    { "name": "paper", "type": "enum", "required": false, "default": "A4",
+      "options": ["A4", "Letter"], "description": "Page size." },
+    { "name": "landscape", "type": "boolean", "required": false, "default": false, "description": "Render in landscape orientation." },
+    { "name": "fileName", "type": "string", "required": false, "supportsVariables": true, "description": "Output file name (without extension)." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": {
+    "nodeName": "Build Invoice PDF",
+    "sourceMode": "template",
+    "template": "invoice",
+    "templateData": { "company.name": "Northwind Studio", "invoice.number": "[Input from trigger-1]" },
+    "paper": "A4",
+    "fileName": "invoice-[[date] from trigger-1]"
+  },
+  "keywords": ["pdf", "document", "invoice", "report", "letter", "certificate", "proposal", "render", "export", "html to pdf"],
+  "contract": {
+    "produces": { "kind": "media", "cardinality": "single", "namedFields": false, "reference": "[Input from {id}]", "note": "Produces a PDF file URL." },
+    "consumes": {
+      "multiField": { "field": "templateData", "requiredKeys": [], "optionalKeys": [] },
+      "note": "templateData maps each template field (dot-path) to its own value/tag; customHtml takes one HTML blob."
+    }
+  }
+}

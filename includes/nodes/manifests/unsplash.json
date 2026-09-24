@@ -1,0 +1,24 @@
+{
+  "type": "unsplash",
+  "label": "Unsplash Image",
+  "category": "Content & Media",
+  "description": "Searches Unsplash and returns a single stock photo matching a query. Runs on the WordPress site (local-only); one photo per execution.",
+  "capabilities": ["stock image search", "Unsplash retrieval"],
+  "modes": ["local"],
+  "credits": 3,
+  "config": [
+    { "name": "searchTerm", "type": "string", "required": true, "supportsVariables": true, "description": "Search query." },
+    { "name": "imageSize", "type": "enum", "required": false, "default": "regular",
+      "options": ["raw", "full", "regular", "small"], "description": "Returned image size." },
+    { "name": "orientation", "type": "enum", "required": false, "default": "all",
+      "options": ["landscape", "portrait", "squarish", "all"], "description": "Image orientation." },
+    { "name": "randomResult", "type": "boolean", "required": false, "description": "Return a random match instead of the top result." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Find Photo", "searchTerm": "mountain sunrise", "imageSize": "regular", "orientation": "landscape" },
+  "keywords": ["unsplash", "image", "photo", "stock", "picture", "media"],
+  "contract": {
+    "produces": { "kind": "media", "cardinality": "single", "namedFields": false, "jsonExtractable": false, "reference": "[Input from {id}]", "note": "Produces ONE image URL. One photo per execution — add more Unsplash nodes for more photos." }
+  }
+}

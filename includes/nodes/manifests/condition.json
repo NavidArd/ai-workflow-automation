@@ -1,0 +1,26 @@
+{
+  "type": "condition",
+  "label": "Condition",
+  "category": "Logic & Control",
+  "description": "Branches the workflow based on one or more condition groups. Each group combines conditions with AND/OR; the node routes execution down the true or false path.",
+  "capabilities": ["conditional branching", "AND/OR groups", "string and numeric comparisons"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "conditionGroups", "type": "array", "required": true,
+      "description": "Array of groups: { type: AND|OR, conditions: [{ input, comparison (equals|contains|startsWith|endsWith|greaterThan|lessThan), value }] }. Inputs support variable tags." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["true", "false"],
+  "example": { "nodeName": "Is Positive?", "conditionGroups": [ { "type": "AND", "conditions": [ { "input": "[Input from sentimentAnalysis-1]", "comparison": "equals", "value": "positive" } ] } ] },
+  "keywords": ["condition", "if", "branch", "logic", "compare", "route"],
+  "contract": {
+    "produces": {
+      "kind": "routing",
+      "handles": ["true", "false"],
+      "passesContent": true,
+      "reference": "connect edges from this node with sourceHandle 'true' or 'false'",
+      "note": "Routes execution down the true or false branch and forwards the upstream content down the taken branch. Both handles should normally be connected."
+    }
+  }
+}

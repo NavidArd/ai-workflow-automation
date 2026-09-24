@@ -1,0 +1,49 @@
+{
+  "type": "trigger",
+  "label": "Trigger",
+  "category": "Core",
+  "description": "Entry point that starts a workflow. Supports manual runs, form submissions (Gravity Forms, WPForms, Contact Form 7, Ninja Forms, Elementor), inbound webhooks, WordPress core events, another workflow's output, and RSS feeds.",
+  "capabilities": ["workflow entry point", "form submissions", "webhooks", "WordPress core events", "RSS polling"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "triggerType", "type": "enum", "required": true, "default": "manual",
+      "options": ["manual", "gravityForms", "wpForms", "contactForm7", "ninjaForms", "elementorForms", "webhook", "wpCore", "workflowOutput", "rss"],
+      "description": "How the workflow is started." },
+    { "name": "content", "type": "string", "required": false, "supportsVariables": false,
+      "description": "Text payload for a manual trigger." },
+    { "name": "selectedForm", "type": "string", "required": false,
+      "description": "Form id reference for form triggers." },
+    { "name": "selectedFields", "type": "array", "required": false,
+      "description": "Form field objects captured from the submission." },
+    { "name": "webhookUrl", "type": "string", "required": false,
+      "description": "Generated unique inbound URL for a webhook trigger." },
+    { "name": "webhookKeys", "type": "array", "required": false,
+      "description": "Key mapping objects for the webhook payload." },
+    { "name": "selectedWpCoreTrigger", "type": "enum", "required": false,
+      "options": ["publish_post", "user_register", "wp_insert_comment", "wp_login", "transition_post_status"],
+      "description": "WordPress core event to listen for." },
+    { "name": "wpCoreTriggerConditions", "type": "object", "required": false,
+      "description": "Trigger-specific conditions for the WordPress core event." },
+    { "name": "selectedWorkflow", "type": "string", "required": false,
+      "description": "Source workflow id when triggerType is workflowOutput." },
+    { "name": "rssSettings", "type": "object", "required": false,
+      "description": "RSS feed url, polling interval, maxItems, filters." }
+  ],
+  "inputs": [],
+  "outputs": ["main"],
+  "example": { "nodeName": "Manual Start", "triggerType": "manual", "content": "Draft a welcome email for a new customer." },
+  "keywords": ["trigger", "start", "webhook", "form", "rss", "event"],
+  "contract": {
+    "produces": {
+      "kind": "structured",
+      "cardinality": "single",
+      "namedFields": true,
+      "dynamicFields": true,
+      "fieldsFrom": "selectedFields",
+      "jsonExtractable": true,
+      "reference": "[Input from {id}] for the whole payload; [[Field Label] from {id}] for a specific form/webhook field",
+      "note": "A manual trigger produces one text blob ([Input from {id}]). Form/webhook/RSS triggers expose named fields whose names are the submitted field labels/keys — these are known only at runtime, so [[label] from {id}] references are ALLOWED and are NOT hard-failed by the validator."
+    }
+  }
+}

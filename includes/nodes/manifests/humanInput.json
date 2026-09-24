@@ -1,0 +1,32 @@
+{
+  "type": "humanInput",
+  "label": "Human Input",
+  "category": "Communication",
+  "description": "Pauses the workflow for a human to approve/reject or modify content. Tasks are assigned to a user or a role and route down handles based on the human decision.",
+  "capabilities": ["human-in-the-loop", "approval gates", "content modification", "role/user assignment"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "inputType", "type": "enum", "required": true, "default": "approval",
+      "options": ["approval", "modification"], "description": "Approval gate or content modification task." },
+    { "name": "assignmentType", "type": "enum", "required": false, "default": "user",
+      "options": ["user", "role"], "description": "Assign the task to a specific user or a role." },
+    { "name": "selectedUser", "type": "string", "required": false, "description": "Assigned user id." },
+    { "name": "selectedRole", "type": "string", "required": false, "description": "Assigned role name." },
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true, "description": "Content presented to the human to review/modify." },
+    { "name": "instructions", "type": "string", "required": false, "supportsVariables": true, "description": "Modification instructions (modification type)." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["approve", "revert", "reject", "modify"],
+  "example": { "nodeName": "Review Draft", "inputType": "approval", "assignmentType": "role", "selectedRole": "editor", "content": "[Input from writeArticle-1]" },
+  "keywords": ["human", "approval", "review", "modify", "task", "hitl"],
+  "contract": {
+    "produces": {
+      "kind": "routing",
+      "handles": ["approve", "revert", "reject", "modify"],
+      "passesContent": true,
+      "reference": "connect edges with sourceHandle matching the decision handle",
+      "note": "Approval type routes via approve/reject; modification type routes via modify/revert. Connect the handle(s) your flow needs and forward the reviewed content downstream."
+    }
+  }
+}

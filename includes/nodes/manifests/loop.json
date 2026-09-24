@@ -1,0 +1,38 @@
+{
+  "type": "loop",
+  "label": "Loop / While",
+  "category": "Logic & Control",
+  "description": "Repeats a body sub-branch: for-each over a collection, a fixed number of times, or while a condition holds. The body runs once per iteration; the 'after' handle continues once with the collected output. Matches the SaaS engine's LoopNodeV4 semantics for local/cloud parity.",
+  "capabilities": ["for-each iteration", "fixed count", "while condition", "output accumulation", "safe iteration cap"],
+  "modes": ["local", "cloud"],
+  "credits": 0,
+  "config": [
+    { "name": "loopType", "type": "enum", "required": true, "default": "forEach",
+      "options": ["forEach", "count", "while"], "description": "Iteration strategy." },
+    { "name": "content", "type": "string", "required": false, "supportsVariables": true,
+      "description": "Collection/array to iterate over (forEach)." },
+    { "name": "iterationCount", "type": "number", "required": false, "default": 3, "description": "Number of repetitions (count)." },
+    { "name": "whileInput", "type": "string", "required": false, "supportsVariables": true, "description": "Value evaluated each iteration (while)." },
+    { "name": "whileComparison", "type": "enum", "required": false, "default": "equals",
+      "options": ["equals", "notEquals", "contains", "greaterThan", "lessThan"], "description": "Comparison operator (while)." },
+    { "name": "whileValue", "type": "string", "required": false, "supportsVariables": true, "description": "Value compared against (while)." },
+    { "name": "outputMode", "type": "enum", "required": false, "default": "accumulate",
+      "options": ["accumulate", "individual", "concatenate", "last"], "description": "How per-iteration results are collected for the 'after' handle." },
+    { "name": "maxIterations", "type": "number", "required": false, "default": 100, "description": "Safety cap on total iterations." },
+    { "name": "continueOnError", "type": "boolean", "required": false, "default": true, "description": "Keep iterating if a body iteration errors." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["body", "after"],
+  "example": { "nodeName": "For each item", "loopType": "forEach", "content": "[Input from firecrawl-1]", "outputMode": "accumulate", "maxIterations": 50 },
+  "keywords": ["loop", "while", "for each", "iterate", "repeat", "batch"],
+  "contract": {
+    "produces": {
+      "kind": "routing",
+      "handles": ["body", "after"],
+      "namedFields": true,
+      "fields": ["currentItem", "currentIndex", "totalCount", "isFirst", "isLast"],
+      "reference": "[[currentItem] from {id}] inside the body branch; [Input from {id}] after the loop",
+      "note": "The 'body' handle runs once per iteration; inside it the iteration variables [[currentItem]] / [[currentIndex]] / [[totalCount]] / [[isFirst]] / [[isLast]] from {id} are available. The 'after' handle continues once with the accumulated output."
+    }
+  }
+}

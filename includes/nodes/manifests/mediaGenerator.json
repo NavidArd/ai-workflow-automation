@@ -1,0 +1,21 @@
+{
+  "type": "mediaGenerator",
+  "label": "Media Generator",
+  "category": "Content & Media",
+  "description": "Generates images, video and audio via Fal.ai. The model list is fetched live from the Fal model registry and the input fields are built dynamically from each model's OpenAPI schema (no hardcoded per-model parameters). A high-cost node.",
+  "capabilities": ["text-to-image", "image-to-video", "text-to-video", "text-to-audio", "AI media generation", "dynamic model catalog", "OpenAPI-driven fields"],
+  "modes": ["local", "cloud"],
+  "credits": 10,
+  "config": [
+    { "name": "selectedModel", "type": "string", "required": true, "description": "Fal.ai endpoint id (e.g. fal-ai/flux/schnell). Chosen from the live, searchable model catalog." },
+    { "name": "modelGroup", "type": "enum", "required": false, "default": "image", "options": ["image", "video", "audio"], "description": "Coarse media type used to filter the picker and pick the result renderer." },
+    { "name": "fieldValues", "type": "object", "required": false, "description": "Model-specific inputs, keyed by the property names from the selected model's OpenAPI input schema (e.g. prompt, image_url, image_size, num_inference_steps). String values support {{variables}} / [Input from node-id] tags. The exact keys depend on the chosen model." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Generate Hero", "selectedModel": "fal-ai/flux/schnell", "modelGroup": "image", "fieldValues": { "prompt": "A minimalist product hero image of [[product] from trigger-1]", "image_size": "landscape_16_9" } },
+  "keywords": ["media", "image", "video", "audio", "generate", "fal", "ai", "multimedia", "dynamic", "openapi"],
+  "contract": {
+    "produces": { "kind": "media", "cardinality": "single", "namedFields": false, "jsonExtractable": false, "reference": "[Input from {id}]", "note": "Produces ONE media asset URL (image/video/audio)." }
+  }
+}

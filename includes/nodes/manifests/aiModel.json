@@ -1,0 +1,49 @@
+{
+  "type": "aiModel",
+  "label": "AI Prompt",
+  "category": "AI Actions",
+  "description": "Sends a prompt to an AI model and returns the response. Supports OpenAI, Anthropic, OpenRouter and other providers, optional knowledge-base RAG, OpenAI tools (web/file search), and vision image inputs.",
+  "capabilities": ["text generation", "OpenAI/Anthropic/OpenRouter", "optional knowledgebase RAG", "web and file search tools", "vision"],
+  "modes": ["local", "cloud"],
+  "credits": 2,
+  "config": [
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true,
+      "description": "The prompt. Use [Input from node-id] / [[field] from node-id] tags to inject upstream data." },
+    { "name": "model", "type": "string", "required": false, "default": "gpt-5-mini",
+      "description": "Model id. Bare id (no slash) = native OpenAI; provider/model = OpenRouter." },
+    { "name": "settings", "type": "object", "required": false,
+      "description": "Generation params: temperature, top_p, top_k, frequency_penalty, presence_penalty, repetition_penalty, max_tokens." },
+    { "name": "knowledgeBase", "type": "object", "required": false,
+      "description": "Optional retrieval-augmented-generation configuration." },
+    { "name": "openaiTools", "type": "object", "required": false,
+      "description": "OpenAI-only tools: web search and file (vector store) search." },
+    { "name": "imageUrls", "type": "array", "required": false,
+      "description": "Image URLs passed to vision-capable models." },
+    { "name": "structuredOutput", "type": "boolean", "required": false, "default": false,
+      "description": "When true, the node returns a JSON object with named fields (via provider response_format JSON-Schema) instead of a single text blob. Each defined field is addressable downstream as [[name] from node-id]." },
+    { "name": "outputSchema", "type": "array", "required": false,
+      "description": "Only used when structuredOutput=true. Array of { name, type, description } defining the output fields the model must return. type is one of string|number|boolean|array|object." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Summarize", "content": "Summarize the following text:\n[Input from trigger-1]", "model": "gpt-5-mini" },
+  "keywords": ["ai", "gpt", "claude", "llm", "prompt", "generate", "openai", "anthropic"],
+  "contract": {
+    "produces": {
+      "kind": "text",
+      "cardinality": "single-or-named",
+      "namedFields": false,
+      "nativeMultiOutput": true,
+      "fieldsFrom": "outputSchema",
+      "fieldNameKey": "name",
+      "fieldsCondition": "structuredOutput",
+      "jsonExtractable": true,
+      "reference": "[Input from {id}] for the whole output; [[{field}] from {id}] for a structured field",
+      "note": "By DEFAULT produces ONE text output ([Input from {id}]). When node.data.structuredOutput=true it NATIVELY produces one named field per outputSchema[].name — reference each as [[name] from {id}] (nativeMultiOutput=true). This is the PREFERRED, reliable way to split one AI result into several named fields — no Extract Information / Parser bridge node is needed. If structuredOutput is OFF, a [[field] from {id}] reference resolves ONLY if THIS node's prompt explicitly instructs the model to return strict JSON containing that exact key; otherwise the tag leaks unresolved."
+    },
+    "consumes": { "fields": [ { "name": "content", "required": true, "supportsVariables": true } ] },
+    "constraints": [
+      "To feed several DISTINCT fields of a downstream multi-field consumer (e.g. a Post's title + content + excerpt) from one AI result, PREFER enabling structuredOutput=true on THIS node and defining one outputSchema field per needed key ({name, type, description}), then reference [[key] from {id}] in the consumer — NO bridge node. Only if that is unsuitable, fall back to: (a) instruct THIS node to output strict JSON with those exact keys and reference [[key] from {id}]; (b) insert an AI Extract Information node after it with one extractionField per needed field; or (c) use a separate AI Prompt node per field. NEVER invent [[title]]/[[excerpt]] tags on a plain AI node (structuredOutput off) that only returns prose."
+    ]
+  }
+}

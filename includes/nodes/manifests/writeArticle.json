@@ -1,0 +1,22 @@
+{
+  "type": "writeArticle",
+  "label": "Write an Article",
+  "category": "AI Actions",
+  "description": "Generates a complete article from a topic and writing instructions, targeting a desired word count.",
+  "capabilities": ["long-form article generation", "content writing"],
+  "modes": ["local", "cloud"],
+  "credits": 3,
+  "config": [
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true,
+      "description": "Article topic and writing instructions." },
+    { "name": "wordCount", "type": "number", "required": false, "default": 1000,
+      "description": "Target word count (100-10000)." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Draft Post", "content": "Write a blog post about: [[title] from aiModel-1]", "wordCount": 800 },
+  "keywords": ["article", "write", "blog", "content", "long-form", "ai"],
+  "contract": {
+    "produces": { "kind": "text", "cardinality": "single", "namedFields": false, "jsonExtractable": true, "reference": "[Input from {id}]", "note": "Produces one article as text. A [[field] from {id}] reference resolves only if this node is instructed to emit strict JSON with that key." }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "type": "extractInformation",
+  "label": "AI Extract Information",
+  "category": "AI Actions",
+  "description": "Extracts specific, structured information fields from unstructured text. Each field can be a single value or a list.",
+  "capabilities": ["structured data extraction", "field extraction", "list extraction"],
+  "modes": ["local", "cloud"],
+  "credits": 2,
+  "config": [
+    { "name": "content", "type": "string", "required": true, "supportsVariables": true,
+      "description": "Source text to extract from." },
+    { "name": "extractionFields", "type": "array", "required": true,
+      "description": "Array of { name, description, isList } objects describing what to extract." }
+  ],
+  "inputs": ["main"],
+  "outputs": ["main"],
+  "example": { "nodeName": "Extract Contacts", "content": "[Input from trigger-1]", "extractionFields": [ { "name": "email", "description": "The sender's email address", "isList": false }, { "name": "topics", "description": "Topics mentioned", "isList": true } ] },
+  "keywords": ["extract", "structured", "fields", "parse", "data", "ai"],
+  "contract": {
+    "produces": {
+      "kind": "structured",
+      "cardinality": "named",
+      "namedFields": true,
+      "fieldsFrom": "extractionFields",
+      "fieldNameKey": "name",
+      "reference": "[[{field}] from {id}]",
+      "note": "Produces one named output per extractionFields[].name. This is the RELIABLE bridge for splitting a single text blob into multiple named fields for a downstream multi-field consumer (preferred over the Document Parser node, which only ingests documents and does not split fields)."
+    },
+    "consumes": { "fields": [ { "name": "content", "required": true, "supportsVariables": true } ] }
+  }
+}

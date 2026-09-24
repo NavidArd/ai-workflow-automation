@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://massiveshift.com/schemas/wp-ai-workflows/node-manifest.schema.json",
+  "title": "WP AI Workflows — Node Manifest",
+  "description": "Language-neutral declaration of a single workflow node's capabilities and configuration. One manifest per canonical node `type` (matching nodeTypes.js / the executor switch). Single source of truth consumed by the generator prompt, the builder palette/config, workflow validation, and docs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "label", "category", "description", "modes", "credits", "config"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "description": "Canonical node id. MUST match the key in frontend/src/components/nodes/nodeTypes.js and the case in the executor switch (includes/class-wp-ai-workflows-node-execution.php).",
+      "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+    },
+    "label": {
+      "type": "string",
+      "description": "Human-readable name shown in the builder palette."
+    },
+    "category": {
+      "type": "string",
+      "description": "Palette group. One of the canonical categories used by FloatingSidebar.js.",
+      "enum": [
+        "Core",
+        "AI Actions",
+        "Data Processing",
+        "Content & Media",
+        "Communication",
+        "Logic & Control"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "One or two sentences describing what the node does. Reused in the generator catalog and docs."
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "Short capability phrases used by the generator to reason about node selection.",
+      "items": { "type": "string" }
+    },
+    "modes": {
+      "type": "array",
+      "description": "Where the node can run. `local` = executes on the WordPress site (BYOK). `cloud` = eligible for the metered platform proxy. Mirrors config/cloudNodeMap.js.",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["local", "cloud"] }
+    },
+    "credits": {
+      "type": "number",
+      "description": "Credit cost when metered (mirrors config/cloudNodeMap.js + credits.pricing.ts). 0 for structural/free nodes.",
+      "minimum": 0
+    },
+    "config": {
+      "type": "array",
+      "description": "Field schema used for BOTH the builder config form and generated/imported-workflow validation.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Field key on the node's `data` object.",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "type": {
+            "type": "string",
+            "description": "Field value type.",
+            "enum": ["string", "number", "boolean", "enum", "object", "array"]
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Whether the field must be present for the node to run. Defaults to false."
+          },
+          "default": {
+            "description": "Default value used by the builder and assumed by the generator when omitted."
+          },
+          "options": {
+            "type": "array",
+            "description": "Allowed values when `type` is `enum` (or a curated option list)."
+          },
+          "description": {
+            "type": "string",
+            "description": "What the field controls."
+          },
+          "supportsVariables": {
+            "type": "boolean",
+            "description": "Whether the field accepts {{node.field}} / [Input from node-id] variable tags."
+          }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Named input handles (usually [\"main\"]).",
+      "items": { "type": "string" }
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Named output handles. E.g. condition => [\"true\",\"false\"]; humanInput => [\"approve\",\"reject\",...].",
+      "items": { "type": "string" }
+    },
+    "example": {
+      "type": "object",
+      "description": "A minimal, realistic `data` payload the generator can copy to show correct usage."
+    },
+    "keywords": {
+      "type": "array",
+      "description": "Search/selection hints for the palette and generator.",
+      "items": { "type": "string" }
+    },
+    "contract": {
+      "type": "object",
+      "description": "Semantic I/O contract: the MEANING and cardinality of what this node consumes and produces, richer than the `config` field schema. Consumed by the generator prompt (so it wires shapes correctly) and by the workflow validator (so it can flag shape mismatches — e.g. a single text blob wired into a multi-field consumer, or a fabricated `[[field] from node]` reference). Optional; when absent the catalog derives a sensible default (single text-blob output, config-derived consumed fields).",
+      "additionalProperties": true
+    }
+  }
+}
