@@ -40,7 +40,7 @@ class WP_AI_Workflows_Model_Catalog {
 	const DEFAULT_MODEL = 'gpt-5-mini';
 
 	/**
-	 * Model the plugin uses for its OWN reasoning — the workflow generator and
+	 * Model the plugin uses for its OWN reasoning - the workflow generator and
 	 * the Workflow Sage assistant both "think" with this model via OpenRouter.
 	 *
 	 * This is NOT the model assigned to the AI nodes a user builds; it is the
@@ -90,14 +90,14 @@ class WP_AI_Workflows_Model_Catalog {
 		$entries    = array();
 		$sources_ok = array();
 
-		// 1) OpenRouter — public, no key required, includes per-token pricing.
+		// 1) OpenRouter - public, no key required, includes per-token pricing.
 		$openrouter = self::fetch_openrouter_models();
 		if ( is_array( $openrouter ) && ! empty( $openrouter ) ) {
 			$entries          = array_merge( $entries, $openrouter );
 			$sources_ok[]     = 'openrouter';
 		}
 
-		// 2) OpenAI — only when the user has configured a key. The /v1/models
+		// 2) OpenAI - only when the user has configured a key. The /v1/models
 		//    endpoint does not return pricing, so we decorate known ids from the
 		//    static pricing map and leave the rest priced null.
 		$openai = self::fetch_openai_models();
@@ -107,7 +107,7 @@ class WP_AI_Workflows_Model_Catalog {
 		}
 
 		if ( empty( $entries ) ) {
-			// Everything failed — serve the hard-coded fallback so the UI and the
+			// Everything failed - serve the hard-coded fallback so the UI and the
 			// validator still work. Cache it briefly so a transient outage does
 			// not hammer the provider APIs on every request.
 			$catalog = array(

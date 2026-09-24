@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://massiveshift.com/schemas/wp-ai-workflows/node-manifest.schema.json",
-  "title": "WP AI Workflows — Node Manifest",
+  "title": "WP AI Workflows - Node Manifest",
   "description": "Language-neutral declaration of a single workflow node's capabilities and configuration. One manifest per canonical node `type` (matching nodeTypes.js / the executor switch). Single source of truth consumed by the generator prompt, the builder palette/config, workflow validation, and docs.",
   "type": "object",
   "additionalProperties": false,
@@ -110,7 +110,7 @@
     },
     "contract": {
       "type": "object",
-      "description": "Semantic I/O contract: the MEANING and cardinality of what this node consumes and produces, richer than the `config` field schema. Consumed by the generator prompt (so it wires shapes correctly) and by the workflow validator (so it can flag shape mismatches — e.g. a single text blob wired into a multi-field consumer, or a fabricated `[[field] from node]` reference). Optional; when absent the catalog derives a sensible default (single text-blob output, config-derived consumed fields).",
+      "description": "Semantic I/O contract: the MEANING and cardinality of what this node consumes and produces, richer than the `config` field schema. Consumed by the generator prompt (so it wires shapes correctly) and by the workflow validator (so it can flag shape mismatches, e.g. a single text blob wired into a multi-field consumer, or a fabricated `[[field] from node]` reference). Optional; when absent the catalog derives a sensible default (single text-blob output, config-derived consumed fields).",
       "additionalProperties": true
     }
   }

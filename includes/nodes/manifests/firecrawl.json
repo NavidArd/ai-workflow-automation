@@ -2,7 +2,7 @@
   "type": "firecrawl",
   "label": "Web Scraper (Firecrawl)",
   "category": "Data Processing",
-  "description": "Turns the web into clean, AI-ready data via the Firecrawl v2 API. Five operations: scrape a single URL, crawl a whole site, map a site's URLs, run a web/news/image search, or run an Agent extraction (structured data from a prompt/schema — the v2 replacement for the deprecated /extract endpoint).",
+  "description": "Turns the web into clean, AI-ready data via the Firecrawl v2 API. Five operations: scrape a single URL, crawl a whole site, map a site's URLs, run a web/news/image search, or run an Agent extraction (structured data from a prompt/schema; the v2 replacement for the deprecated /extract endpoint).",
   "capabilities": ["single-page scraping", "site crawling", "URL discovery (map)", "web/news/image search", "agent structured extraction", "markdown/html/json/question/highlights output"],
   "modes": ["local", "cloud"],
   "credits": 5,
@@ -47,7 +47,7 @@
     { "name": "searchScrape", "type": "boolean", "required": false, "description": "Also scrape full page content for each search result (search)." },
     { "name": "location", "type": "string", "required": false, "supportsVariables": true, "description": "Geographic location bias for search results." },
 
-    { "name": "agentPrompt", "type": "string", "required": false, "supportsVariables": true, "description": "Extraction prompt for the Agent operation (v2 /agent — replaces the deprecated /extract)." },
+    { "name": "agentPrompt", "type": "string", "required": false, "supportsVariables": true, "description": "Extraction prompt for the Agent operation (v2 /agent, replaces the deprecated /extract)." },
     { "name": "agentFields", "type": "array", "required": false, "description": "Schema fields ({ name, type }) for the Agent extraction; compiled into a JSON Schema." },
     { "name": "agentUrls", "type": "array", "required": false, "supportsVariables": true, "description": "Optional seed URLs to ground the Agent extraction." }
   ],

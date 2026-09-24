@@ -118,7 +118,7 @@ class WP_AI_Workflows_Node_Execution {
 				// (WP_AI_Workflows_Workflow::execute_workflow), which has the
 				// topological order + the body sub-branch it needs to run the
 				// loop body once per item. If a loop node is ever dispatched
-				// here directly (e.g. nested inside another loop's body — a case
+				// here directly (e.g. nested inside another loop's body - a case
 				// this port intentionally does not support), degrade gracefully
 				// to an empty collected result instead of erroring.
 				$loop_output_mode = isset( $node['data']['outputMode'] ) ? $node['data']['outputMode'] : 'accumulate';
@@ -486,6 +486,17 @@ class WP_AI_Workflows_Node_Execution {
 		return '';
 	}
 
+	/**
+	 * The AI model node's own prompt text, keeping newlines and tabs intact.
+	 *
+	 * @param array $node Node definition.
+	 * @return string Prompt text.
+	 */
+	private static function prompt_content( $node ) {
+		$content = isset( $node['data']['content'] ) ? $node['data']['content'] : 'Default prompt';
+		return sanitize_textarea_field( (string) $content );
+	}
+
 
 	public static function execute_ai_model_node( $node, $input_data, $execution_id ) {
 		WP_AI_Workflows_Utilities::debug_function(
@@ -496,7 +507,7 @@ class WP_AI_Workflows_Node_Execution {
 			)
 		);
 
-		$content     = sanitize_text_field( $node['data']['content'] ?? 'Default prompt' );
+		$content     = self::prompt_content( $node );
 		$model       = isset( $node['data']['model'] ) ? $node['data']['model'] : WP_AI_Workflows_Model_Catalog::get_default_model();
 		$imageUrls   = isset( $node['data']['imageUrls'] ) ? $node['data']['imageUrls'] : array();
 		$parameters  = isset( $node['data']['settings'] ) ? $node['data']['settings'] : array();
@@ -541,7 +552,7 @@ class WP_AI_Workflows_Node_Execution {
 			$imageUrls
 		);
 
-		// RAG: opt-in Supabase (pgvector) knowledge base retrieval. Fail-open —
+		// RAG: opt-in Supabase (pgvector) knowledge base retrieval. Fail-open:
 		// retrieval errors leave the prompt unchanged rather than failing the node.
 		$kb_cfg = isset( $node['data']['knowledgeBase'] ) ? $node['data']['knowledgeBase'] : null;
 		if ( is_array( $kb_cfg ) && ! empty( $kb_cfg['enabled'] ) && ! empty( $kb_cfg['kbId'] )
@@ -589,7 +600,7 @@ class WP_AI_Workflows_Node_Execution {
 
 		// "WordPress AI (site default)" routes through core's provider-agnostic
 		// AI Client (WP 7.0+), using whatever provider the site owner configured
-		// in Settings > AI (Connectors) — bypasses both BYOK keys and platform
+		// in Settings > AI (Connectors) - bypasses both BYOK keys and platform
 		// credits. Feature-detected so older WordPress builds error clearly.
 		if ( 'wordpress_ai' === $model ) {
 			return self::execute_ai_model_via_wp_ai_client( $node, $prompt, $parameters, $execution_id );
@@ -704,7 +715,7 @@ class WP_AI_Workflows_Node_Execution {
 
 				if ( is_wp_error( $response ) ) {
 					// Surface the error message as a string, never the WP_Error
-					// object itself — that was the WSOD cause. Previously this
+					// object itself - that was the WSOD cause. Previously this
 					// branch fell through with no return, so the node silently
 					// resolved to null on any provider failure.
 					return self::create_node_data( 'error', $response->get_error_message() );
@@ -761,14 +772,14 @@ class WP_AI_Workflows_Node_Execution {
 	/**
 	 * Execute an AI model node through the core WordPress AI Client (WP 7.0+).
 	 *
-	 * "WordPress AI (site default)" — routes the text generation through core's
+	 * "WordPress AI (site default)" - routes the text generation through core's
 	 * provider-agnostic AI Client so it uses whatever provider the site owner
 	 * configured under Settings > AI (Connectors). Complements (does not replace)
 	 * the BYOK and credits paths.
 	 *
 	 * Feature-detected end to end: if `wp_ai_client_prompt()` is absent (pre-7.0)
 	 * or no text-generation provider is configured, it returns a clear error
-	 * node result rather than fataling — the workflow keeps running.
+	 * node result rather than fataling - the workflow keeps running.
 	 *
 	 * @param array  $node         The AI model node.
 	 * @param string $prompt       Tag-resolved user prompt.
@@ -834,7 +845,7 @@ class WP_AI_Workflows_Node_Execution {
 	/**
 	 * Execute an AI model node through the metered credits proxy (keyless AI).
 	 *
-	 * Builds an allow-listed payload — no provider key is ever sent — and maps the
+	 * Builds an allow-listed payload - no provider key is ever sent - and maps the
 	 * proxy result into the same create_node_data('aiModel', ...) shape the BYOK
 	 * path produces. On failure it returns an error node result and never falls
 	 * back to the site's BYOK key.
@@ -914,7 +925,7 @@ class WP_AI_Workflows_Node_Execution {
 	 * the parsed associative array is stored so each defined field is resolvable
 	 * downstream as `[[name] from nodeId]`. Otherwise (structured off, or the
 	 * model returned non-JSON) it falls back to the original markdown-processed
-	 * single-blob behavior — byte-identical to the pre-feature path.
+	 * single-blob behavior - byte-identical to the pre-feature path.
 	 *
 	 * @param string $content           Raw model text.
 	 * @param bool   $structured_output Whether structured output was requested.
@@ -1001,7 +1012,7 @@ class WP_AI_Workflows_Node_Execution {
 				continue;
 			}
 			$type = isset( $field['type'] ) ? (string) $field['type'] : 'string';
-			$desc = ! empty( $field['description'] ) ? ' — ' . (string) $field['description'] : '';
+			$desc = ! empty( $field['description'] ) ? ': ' . (string) $field['description'] : '';
 			$lines[] = '- "' . (string) $field['name'] . '" (' . $type . ')' . $desc;
 		}
 		if ( empty( $lines ) ) {
@@ -1014,7 +1025,7 @@ class WP_AI_Workflows_Node_Execution {
 	/**
 	 * Map a credits-proxy WP_Error into a clear error node result. Attaches
 	 * machine-readable `errorCode` + top-up fields so the builder can raise the
-	 * shared TopUpPrompt. Never falls back to BYOK — only ever returns an error.
+	 * shared TopUpPrompt. Never falls back to BYOK - only ever returns an error.
 	 *
 	 * @param WP_Error $error
 	 * @return array Error node data.
@@ -1041,7 +1052,7 @@ class WP_AI_Workflows_Node_Execution {
 				return $result;
 
 			case 'platform_provider':
-				$result              = self::create_node_data( 'error', 'The upstream AI provider failed — you were not charged. Please try again.' );
+				$result              = self::create_node_data( 'error', 'The upstream AI provider failed. You were not charged. Please try again.' );
 				$result['errorCode'] = 'platform_provider';
 				return $result;
 
@@ -1792,16 +1803,37 @@ class WP_AI_Workflows_Node_Execution {
 			'post_status' => isset( $node['data']['postStatus'] ) ? $node['data']['postStatus'] : 'publish',
 		);
 
-		$acf_fields = array();
+		$acf_fields     = array();
+		$product_fields = array();
+		$meta_fields    = array();
 
 		if ( isset( $node['data']['fieldMappings'] ) ) {
+			$resolved = array();
+
 			foreach ( $node['data']['fieldMappings'] as $field => $value ) {
-				$replaced_value = self::replace_input_tags( $value, $input_data );
-				$replaced_value = self::strip_unresolved_input_tags( $replaced_value );
-				if ( strpos( $field, 'acf_' ) === 0 ) {
-					$acf_fields[ substr( $field, 4 ) ] = $replaced_value;
-				} elseif ( '' !== trim( (string) $replaced_value ) ) {
-					$post_data[ $field ] = $replaced_value;
+				$replaced_value     = self::replace_input_tags( $value, $input_data );
+				$resolved[ $field ] = self::strip_unresolved_input_tags( $replaced_value );
+			}
+
+			$mapping_buckets = WP_AI_Workflows_Post_Fields::split_mappings( $resolved, $post_data['post_type'] );
+
+			foreach ( $mapping_buckets['core'] as $field => $value ) {
+				if ( is_scalar( $value ) && '' !== trim( (string) $value ) ) {
+					$post_data[ $field ] = $value;
+				}
+			}
+
+			$acf_fields = $mapping_buckets['acf'];
+
+			foreach ( $mapping_buckets['product'] as $field => $value ) {
+				if ( is_scalar( $value ) && '' !== trim( (string) $value ) ) {
+					$product_fields[ $field ] = $value;
+				}
+			}
+
+			foreach ( $mapping_buckets['meta'] as $field => $value ) {
+				if ( is_scalar( $value ) && '' !== trim( (string) $value ) ) {
+					$meta_fields[ $field ] = $value;
 				}
 			}
 		}
@@ -2127,6 +2159,16 @@ class WP_AI_Workflows_Node_Execution {
 			}
 		}
 
+		if ( ! empty( $product_fields ) ) {
+			$applied_product = WP_AI_Workflows_Post_Fields::apply_product_fields( $post_id, $product_fields );
+			WP_AI_Workflows_Utilities::debug_log( 'Product fields written', 'debug', array( 'fields' => $applied_product ) );
+		}
+
+		if ( ! empty( $meta_fields ) ) {
+			$applied_meta = WP_AI_Workflows_Post_Fields::apply_meta( $post_id, $meta_fields );
+			WP_AI_Workflows_Utilities::debug_log( 'Post meta written', 'debug', array( 'keys' => $applied_meta ) );
+		}
+
 		if ( ! empty( $acf_fields ) && function_exists( 'update_field' ) ) {
 			foreach ( $acf_fields as $field_name => $field_value ) {
 				update_field( $field_name, $field_value, $post_id );
@@ -2246,9 +2288,9 @@ class WP_AI_Workflows_Node_Execution {
 	 * optimization) should use when the running workflow is in LOCAL (BYOK)
 	 * mode.
 	 *
-	 * These nodes have no per-node model selector — unlike the aiModel node,
+	 * These nodes have no per-node model selector - unlike the aiModel node,
 	 * which reads a model id off the node and infers the provider from its
-	 * format (a "/" means OpenRouter) — so they previously hardcoded the
+	 * format (a "/" means OpenRouter) - so they previously hardcoded the
 	 * native OpenAI provider + `gpt-5-mini` outright. That broke any
 	 * Local-mode user who configured only an OpenRouter (or other non-OpenAI)
 	 * key: the node forced OpenAI and failed with a missing-key error.
@@ -2361,7 +2403,7 @@ class WP_AI_Workflows_Node_Execution {
 		}
 
 		// Extract just the content from the response. Never pass the WP_Error
-		// object itself through as node content — it isn't a string, and any
+		// object itself through as node content - it isn't a string, and any
 		// later string interpolation/concatenation of it (templating,
 		// wp_json_encode consumers, etc.) is a WSOD waiting to happen.
 		$content = is_wp_error( $response ) ? $response->get_error_message() : $response['choices'][0]['message']['content'];
@@ -2649,6 +2691,7 @@ class WP_AI_Workflows_Node_Execution {
 				'_sale_price'    => 'Sale Price',
 				'_sku'           => 'SKU',
 				'_stock'         => 'Stock Quantity',
+				'_stock_status'  => 'Stock Status',
 			);
 			foreach ( $wc_fields as $name => $label ) {
 				$fields[] = array(
@@ -3155,7 +3198,7 @@ class WP_AI_Workflows_Node_Execution {
 	}
 
 	/**
-	 * Generate PDF node — cloud-rendered, credit-metered.
+	 * Generate PDF node - cloud-rendered, credit-metered.
 	 *
 	 * PHP cannot run a headless Chromium locally, so this node NEVER renders on the
 	 * WordPress site. It assembles a render request from the node config (a built-in
@@ -3761,7 +3804,7 @@ class WP_AI_Workflows_Node_Execution {
 	 * The action runs on the PLATFORM (Pipedream + the org's connected accounts live
 	 * there; local PHP cannot and must not run it). We resolve variable tags in the
 	 * saved tool config, then call the metered `/api/v1/mcp/actions/run` endpoint via
-	 * the site-key client — which reserves + settles exactly 1 credit against the org
+	 * the site-key client - which reserves + settles exactly 1 credit against the org
 	 * resolved server-side from THIS site's key, so a local run bills identically to a
 	 * cloud run. The result is returned in the legacy-compatible mcpClient shape so
 	 * downstream nodes and `{{variables}}` from this node keep working.
@@ -3864,7 +3907,7 @@ class WP_AI_Workflows_Node_Execution {
 
 	/**
 	 * Execute a dynamic (OpenAPI-driven) media generation. The node's `fieldValues`
-	 * map is passed generically to the selected Fal model — no per-model parameter
+	 * map is passed generically to the selected Fal model - no per-model parameter
 	 * logic. Variable tags inside string values are resolved against upstream input.
 	 *
 	 * @param array $node_data Node configuration data.
@@ -6381,7 +6424,7 @@ class WP_AI_Workflows_Node_Execution {
 	 *   3. Exact top-level key.
 	 *   4. Case-insensitive top-level key (models sometimes return "Title"/"Body"
 	 *      when the schema/prompt asked for "title"/"body").
-	 *   5. Recurse into a nested `content` value — this reaches a structured JSON
+	 *   5. Recurse into a nested `content` value - this reaches a structured JSON
 	 *      blob stored as a string under the AI tools/RAG envelope
 	 *      ({content, citations, search_results}), which was the cause of the
 	 *      leaked-tag bug when feeding structured fields into a Post node.
@@ -6423,7 +6466,7 @@ class WP_AI_Workflows_Node_Execution {
 			}
 		}
 
-		// 2) Exact top-level key. A directly matched field wins outright — never
+		// 2) Exact top-level key. A directly matched field wins outright - never
 		// recurse into its own value hunting a same-named nested key (that emptied
 		// a flat decoded `content` whose value merely started with '{').
 		if ( array_key_exists( $field_path, $node_content ) ) {
@@ -6454,7 +6497,7 @@ class WP_AI_Workflows_Node_Execution {
 	 * Best-effort repair of the common JSON mistakes models make, applied only
 	 * after a raw decode has already failed: escape raw control characters
 	 * (newline/carriage-return/tab) that sit inside string literals, drop trailing
-	 * commas before } or ], and normalise smart quotes. Conservative — never
+	 * commas before } or ], and normalise smart quotes. Conservative - never
 	 * touches structure, only makes an otherwise-valid object parseable.
 	 *
 	 * @param string $json Raw JSON-ish text.
@@ -6655,7 +6698,7 @@ class WP_AI_Workflows_Node_Execution {
 	 * Ported from the SaaS platform's LoopNodeV4 processor so a workflow with a
 	 * loop produces the SAME result whether it runs Local (this PHP engine) or
 	 * Cloud (the platform engine). The plugin engine is a single-pass
-	 * topological executor, so — unlike the platform's re-entrant engine — this
+	 * topological executor, so - unlike the platform's re-entrant engine - this
 	 * node OWNS its body sub-branch: it runs the body once per iteration inline,
 	 * exposing the per-item variables the platform exposes, then hands control
 	 * back to the "After loop" (completed) continuation.
@@ -6684,7 +6727,7 @@ class WP_AI_Workflows_Node_Execution {
 		$output_mode       = isset( $data['outputMode'] ) ? $data['outputMode'] : 'accumulate';
 		$continue_on_error = isset( $data['continueOnError'] ) ? (bool) $data['continueOnError'] : true;
 
-		// Hard safety cap — fail-closed on runaway loops regardless of config.
+		// Hard safety cap - fail-closed on runaway loops regardless of config.
 		$hard_cap       = 1000;
 		$max_iterations = isset( $data['maxIterations'] ) ? intval( $data['maxIterations'] ) : 100;
 		if ( $max_iterations < 1 ) {
@@ -6701,7 +6744,7 @@ class WP_AI_Workflows_Node_Execution {
 		foreach ( $sorted_nodes as $sn ) {
 			if ( in_array( $sn['id'], $body_ids, true ) ) {
 				// Nested loops / human-input / triggers inside a loop body are
-				// not supported in this port — skip them defensively.
+				// not supported in this port - skip them defensively.
 				if ( in_array( $sn['type'], array( 'loop', 'humanInput', 'trigger' ), true ) ) {
 					continue;
 				}

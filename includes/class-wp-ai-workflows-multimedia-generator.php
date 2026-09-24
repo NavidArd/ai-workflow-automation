@@ -1077,7 +1077,7 @@ class WP_AI_Workflows_Multimedia_Generator {
 	/** Transient key prefix for a single model's normalized input schema. */
 	const SCHEMA_CACHE_PREFIX = 'wpaw_fal_model_schema_';
 
-	/** Catalog / schema cache lifetime (12h — the registry changes rarely). */
+	/** Catalog / schema cache lifetime (12h - the registry changes rarely). */
 	const CATALOG_TTL = 43200;
 
 	/**
@@ -1641,7 +1641,7 @@ class WP_AI_Workflows_Multimedia_Generator {
 
 	/**
 	 * Generic generation: submit the assembled inputs to the model endpoint and
-	 * return the completed result. Works for ANY Fal model (image/video/audio) —
+	 * return the completed result. Works for ANY Fal model (image/video/audio) -
 	 * no per-model parameter logic.
 	 *
 	 * @param string $model  Fal endpoint id.
@@ -1720,7 +1720,7 @@ class WP_AI_Workflows_Multimedia_Generator {
 
 	/**
 	 * Poll a Fal queue using the status/response URLs returned by the submit call.
-	 * No model-specific base-path derivation — fully generic.
+	 * No model-specific base-path derivation - fully generic.
 	 *
 	 * @param string $status_url   Queue status URL.
 	 * @param string $response_url Queue response (result) URL.

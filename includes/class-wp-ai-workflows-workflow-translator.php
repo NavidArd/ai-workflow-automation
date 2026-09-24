@@ -1,12 +1,12 @@
 <?php
 /**
- * WP_AI_Workflows_Workflow_Translator — converts the plugin's stored React Flow
+ * WP_AI_Workflows_Workflow_Translator - converts the plugin's stored React Flow
  * workflow JSON into the cloud engine's native `definition` and decides per-node
  * cloud eligibility. Pure PHP (no WordPress functions), invoked server-side at
  * submit time since scheduled/trigger-fired cloud runs have no browser.
  *
  * Fail-closed: unsupported nodes are rejected and named, never silently dropped.
- * `frontend/src/config/cloudNodeMap.js` is an advisory mirror — keep in sync.
+ * `frontend/src/config/cloudNodeMap.js` is an advisory mirror - keep in sync.
  *
  * @package WP_AI_Workflows
  */
@@ -58,7 +58,7 @@ class WP_AI_Workflows_Translation_Error {
 
 class WP_AI_Workflows_Workflow_Translator {
 
-	/** Non-executable visual aids — stripped from the cloud definition (R4.3). */
+	/** Non-executable visual aids - stripped from the cloud definition (R4.3). */
 	const ANNOTATION_TYPES = array( 'stickyNote', 'textAnnotation', 'shape' );
 
 	/** Plugin type id => engine processor id (case/naming remap, R4.2). */
@@ -68,15 +68,16 @@ class WP_AI_Workflows_Workflow_Translator {
 	);
 
 	/**
-	 * Engine processor ids that are cloud-executable 1:1 (post-remap). This is the
-	 * 18-supported set MINUS `chat` (hybrid, blocked in the translator per Q5).
-	 * `output` is here but additionally gated by outputType (WP-local types blocked).
+	 * Engine processor ids that are cloud-executable 1:1 (post-remap). `output` is
+	 * here but additionally gated by outputType (WP-local types blocked), and a
+	 * supported type can still be refused for a setting the cloud cannot honour
+	 * (see unsupported_setting()).
 	 */
 	const SUPPORTED_ENGINE_TYPES = array(
-		'trigger', 'aiModel', 'output', 'condition', 'parser', 'humanInput',
+		'trigger', 'aiModel', 'output', 'condition', 'humanInput',
 		'sendEmail', 'research', 'firecrawl', 'sentimentAnalysis',
 		'summaryGenerator', 'extractInformation', 'writeArticle', 'optimizeSEO',
-		'mediaGenerator', 'apiCall', 'mcpClient',
+		'mediaGenerator', 'apiCall', 'mcpClient', 'loop',
 	);
 
 	/**
@@ -99,11 +100,15 @@ class WP_AI_Workflows_Workflow_Translator {
 	);
 
 	/**
-	 * Executable types with no engine processor that must run Locally (or be removed).
-	 * Wave 4: `post` left this set — it is now rewritten to a `wpAction` insert_post
-	 * callback. `unsplash`/`createFile` remain blocked (no callback action for them).
+	 * Executable types that must run Locally, each with the reason the builder shows.
+	 * `post` is not here: it is rewritten to a `wpAction` insert_post callback.
 	 */
-	const NO_PROCESSOR_TYPES = array( 'unsplash', 'createFile' );
+	const LOCAL_ONLY_TYPES = array(
+		'unsplash'    => 'Unsplash images are fetched by your site, so this workflow needs to run Locally.',
+		'createFile'  => 'Create File writes into your site\'s media library, so this workflow needs to run Locally.',
+		'generatePdf' => 'Generate PDF is rendered by our service and collected by your site, so this workflow needs to run Locally. It still renders in the cloud on credits.',
+		'parser'      => 'Document parsing runs on your site, so this workflow needs to run Locally.',
+	);
 
 	/**
 	 * Translate a stored workflow blob into a cloud definition, or return a typed
@@ -147,7 +152,7 @@ class WP_AI_Workflows_Workflow_Translator {
 
 			// Step 5 (Wave 4): WP-side-effect rewrite. A node classified as `wpAction`
 			// (post node, or output save/database/shortcode/post) becomes a signed
-			// callback carrying {action, payload} — see WP_AI_Workflows_Platform_Callback.
+			// callback carrying {action, payload} - see WP_AI_Workflows_Platform_Callback.
 			if ( 'wpAction' === $class['engineType'] ) {
 				$data = self::build_wp_action_data( $node );
 			} else {
@@ -259,20 +264,25 @@ class WP_AI_Workflows_Workflow_Translator {
 	private static function classify_node( array $node ) {
 		$type        = isset( $node['type'] ) ? (string) $node['type'] : '';
 		$engine_type = isset( self::TYPE_REMAP[ $type ] ) ? self::TYPE_REMAP[ $type ] : $type;
+		$data        = isset( $node['data'] ) && is_array( $node['data'] ) ? $node['data'] : array();
 
-		// Chat: hybrid (Q5) — the widget runs locally; only its AI calls are metered.
+		// Chat: hybrid (Q5) - the widget runs locally; only its AI calls are metered.
 		if ( 'chat' === $type ) {
 			return self::blocked( 'chat runs on this site; enable credit mode to meter its AI calls instead of running it in Cloud.' );
+		}
+
+		if ( isset( self::LOCAL_ONLY_TYPES[ $type ] ) ) {
+			return self::blocked( self::LOCAL_ONLY_TYPES[ $type ] );
+		}
+
+		$setting_reason = self::unsupported_setting( $type, $data );
+		if ( '' !== $setting_reason ) {
+			return self::blocked( $setting_reason );
 		}
 
 		// Wave 4: the `post` node is rewritten to a `wpAction` insert_post callback.
 		if ( 'post' === $type ) {
 			return array( 'supported' => true, 'engineType' => 'wpAction', 'reason' => '' );
-		}
-
-		// Executable types with no engine processor and no callback action.
-		if ( in_array( $type, self::NO_PROCESSOR_TYPES, true ) ) {
-			return self::blocked( 'This node type has no Cloud processor and must run Locally (or be removed).' );
 		}
 
 		if ( 'output' === $engine_type ) {
@@ -284,7 +294,7 @@ class WP_AI_Workflows_Workflow_Translator {
 				return array( 'supported' => true, 'engineType' => 'wpAction', 'reason' => '' );
 			}
 
-			// Remaining WP-local output types have no v2.0 callback action — blocked.
+			// Remaining WP-local output types have no v2.0 callback action - blocked.
 			if ( in_array( $output_type, self::WP_LOCAL_OUTPUT_TYPES, true ) ) {
 				return self::blocked( 'This output type runs on your WordPress site and is not yet supported in Cloud. Use Display/Webhook output, or run Locally.' );
 			}
@@ -311,7 +321,112 @@ class WP_AI_Workflows_Workflow_Translator {
 	}
 
 	/**
-	 * Provider-key field names that must never be sent to the platform — BYOK is
+	 * A cloud-supported node type can still be configured for something the cloud
+	 * engine cannot do. Returns the reason to show in the builder before the run,
+	 * or '' when the node can go.
+	 *
+	 * @param string $type Plugin node type.
+	 * @param array  $data Node data.
+	 * @return string
+	 */
+	private static function unsupported_setting( $type, array $data ) {
+		$output_type = isset( $data['outputType'] ) ? (string) $data['outputType'] : '';
+		if ( 'output' === $type && 'post' === $output_type ) {
+			$type = 'post';
+		}
+
+		switch ( $type ) {
+			case 'post':
+				return self::post_setting_reason( $data );
+
+			case 'firecrawl':
+				$operation = isset( $data['operation'] ) ? (string) $data['operation'] : '';
+				if ( '' !== $operation && ! in_array( $operation, array( 'scrape', 'crawl' ), true ) ) {
+					return 'Cloud can scrape and crawl. Map, search and agent are run by your site, so this workflow needs to run Locally.';
+				}
+				return '';
+
+			case 'sendEmail':
+				if ( ! empty( $data['delayEnabled'] ) ) {
+					return 'A delayed send is scheduled by your site. Turn the delay off to run in Cloud, or run this workflow Locally.';
+				}
+				return '';
+
+			case 'aiModel':
+				$kb = isset( $data['knowledgeBase'] ) && is_array( $data['knowledgeBase'] ) ? $data['knowledgeBase'] : array();
+				if ( ! empty( $kb['enabled'] ) && ! empty( $kb['kbId'] ) ) {
+					return 'A Knowledge Base is stored by your site and read during the run, so this workflow needs to run Locally.';
+				}
+				return '';
+
+			case 'humanInput':
+				$assigned = ( 'role' === ( isset( $data['assignmentType'] ) ? $data['assignmentType'] : '' ) )
+					? ( isset( $data['selectedRole'] ) ? $data['selectedRole'] : '' )
+					: ( isset( $data['selectedUser'] ) ? $data['selectedUser'] : '' );
+				if ( ! empty( $assigned ) ) {
+					return 'A task assigned to a WordPress user or role is tracked by your site, so this workflow needs to run Locally.';
+				}
+				return '';
+
+			case 'loop':
+				$loop_type = isset( $data['loopType'] ) ? (string) $data['loopType'] : '';
+				if ( '' !== $loop_type && 'forEach' !== $loop_type ) {
+					return 'Cloud can loop over a list. Count and While loops are run by your site, so this workflow needs to run Locally.';
+				}
+				return '';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Post fields a cloud run cannot write. The callback creates the post from the
+	 * title, excerpt, content, status and post type; everything else on the node is
+	 * applied by the site's own execution path.
+	 *
+	 * @param array $data Node data.
+	 * @return string
+	 */
+	private static function post_setting_reason( array $data ) {
+		$preamble = 'A Cloud run can set the title, excerpt, content, status and post type. ';
+		$mappings = isset( $data['fieldMappings'] ) && is_array( $data['fieldMappings'] ) ? $data['fieldMappings'] : array();
+
+		foreach ( $mappings as $field => $value ) {
+			if ( 0 === strpos( (string) $field, 'acf_' ) && '' !== trim( (string) $value ) ) {
+				return $preamble . 'ACF fields are written by your site, so this workflow needs to run Locally.';
+			}
+		}
+
+		// The builder always carries a featuredImage shape; only a url or an
+		// attachment id means the node really sets one.
+		$featured     = isset( $data['featuredImage'] ) ? $data['featuredImage'] : '';
+		$has_featured = is_array( $featured )
+			? ( ! empty( $featured['url'] ) || ! empty( $featured['id'] ) )
+			: '' !== trim( (string) $featured );
+		if ( $has_featured ) {
+			return $preamble . 'A featured image is added by your site, so this workflow needs to run Locally.';
+		}
+
+		$site_only = array(
+			'selectedAuthor'     => 'The author is set by your site',
+			'selectedCategories' => 'Categories are set by your site',
+			'productImages'      => 'Product images are added by your site',
+		);
+		foreach ( $site_only as $field => $sentence ) {
+			if ( ! empty( $data[ $field ] ) ) {
+				return $preamble . $sentence . ', so this workflow needs to run Locally.';
+			}
+		}
+
+		if ( 'future' === ( isset( $data['postStatus'] ) ? (string) $data['postStatus'] : '' ) ) {
+			return 'A scheduled post is timed by your site, so this workflow needs to run Locally.';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Provider-key field names that must never be sent to the platform - BYOK is
 	 * local-only. Dropped from every node regardless of contract; Cloud runs
 	 * exclusively on the platform's own keys.
 	 */
@@ -334,54 +449,50 @@ class WP_AI_Workflows_Workflow_Translator {
 	 * Strict per-node data allow-list. Each supported engine type declares its
 	 * `required` and `optional` fields; fields outside the union are dropped, and
 	 * a missing required field or an unverified contract makes the node
-	 * unsupported (fail-closed). Provider keys are never listed — they are
+	 * unsupported (fail-closed). Provider keys are never listed - they are
 	 * stripped unconditionally (PROVIDER_KEY_FIELDS).
 	 *
 	 * @return array<string,array{required:array,optional:array}>
 	 */
 	private static function contracts() {
 		return array(
-			// @verified TriggerNode.ts
+			// Builder + TriggerNode.ts
 			'trigger'            => array(
 				'required' => array(),
-				'optional' => array( 'triggerType', 'settings', 'webhookSettings', 'rssSettings', 'formSettings', 'wpCoreSettings', 'appEventSource', 'workflowOutputSettings', 'mediaType', 'mediaUrl', 'title', 'description', 'categories', 'content', 'nodeName' ),
+				'optional' => array( 'triggerType', 'content', 'selectedForm', 'selectedFields', 'webhookUrl', 'webhookKeys', 'selectedWpCoreTrigger', 'wpCoreTriggerConditions', 'selectedWorkflow', 'rssSettings', 'nodeName' ),
 			),
-			// @verified AIModelNode.ts  (apiKey stripped; keySource is a local-only routing hint)
+			// Builder + AIModelNode.ts. An empty prompt is legal: the node then uses
+			// its incoming input. knowledgeBase is site-held and blocked upstream.
 			'aiModel'            => array(
-				'required' => array( 'model' ),
-				'optional' => array( 'content', 'systemPrompt', 'settings', 'imageUrls', 'pdfUrls', 'openaiTools', 'nodeName' ),
+				'required' => array(),
+				'optional' => array( 'model', 'content', 'settings', 'imageUrls', 'openaiTools', 'structuredOutput', 'outputSchema', 'nodeName' ),
 			),
-			// @verified OutputNode.ts  (only display/webhook reach here; WP-local types blocked upstream)
+			// Builder + OutputNode.ts (only display/webhook reach here).
 			'output'             => array(
 				'required' => array( 'outputType' ),
-				'optional' => array( 'webhookUrl', 'webhookKeys', 'content', 'accessLevel', 'nodeName' ),
+				'optional' => array( 'webhookUrl', 'webhookKeys', 'delayEnabled', 'delayValue', 'delayUnit', 'nodeName' ),
 			),
-			// @verified ConditionNode.ts
+			// Builder + ConditionNode.ts (conditions/operator are the pre-group shape).
 			'condition'          => array(
 				'required' => array(),
-				'optional' => array( 'conditions', 'conditionGroups', 'operator', 'nodeName' ),
+				'optional' => array( 'conditionGroups', 'conditions', 'operator', 'nodeName' ),
 			),
-			// @verified ParserNode.ts
-			'parser'             => array(
-				'required' => array( 'inputType' ),
-				'optional' => array( 'parseType', 'parserSettings', 'documentLink', 'uploadedFiles', 'language', 'parsingInstruction', 'targetPages', 'skipDiagonalText', 'doNotUnrollColumns', 'nodeName' ),
-			),
-			// @verified HumanInputNode.ts
+			// Builder + HumanInputNode.ts. Assignment is site-held and blocked upstream.
 			'humanInput'         => array(
 				'required' => array(),
-				'optional' => array( 'inputType', 'instructions', 'assignedRole', 'assignedTo', 'nodeName' ),
+				'optional' => array( 'inputType', 'content', 'instructions', 'nodeName' ),
 			),
-			// @verified SendEmailNode.ts
+			// Builder + SendEmailNode.ts. A delayed send is blocked upstream.
 			'sendEmail'          => array(
-				'required' => array( 'to' ),
-				'optional' => array( 'subject', 'body', 'isHtml', 'attachments', 'nodeName' ),
+				'required' => array( 'to', 'subject', 'body' ),
+				'optional' => array( 'cc', 'bcc', 'useHtml', 'attachments', 'nodeName' ),
 			),
-			// @verified ResearchNode.ts
+			// Builder + ResearchNode.ts.
 			'research'           => array(
 				'required' => array(),
-				'optional' => array( 'model', 'content', 'searchContext', 'citations', 'searchDomainFilters', 'search_recency_filter', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'nodeName' ),
+				'optional' => array( 'model', 'content', 'searchContext', 'citations', 'citationQuality', 'searchDomainFilters', 'search_recency_filter', 'temperature', 'top_p', 'frequency_penalty', 'presence_penalty', 'nodeName' ),
 			),
-			// @verified FirecrawlNode.js (v2 redesign: scrape/crawl/map/search/agent)
+			// Builder + FirecrawlNode.ts. Map, search and agent are blocked upstream.
 			'firecrawl'          => array(
 				'required' => array(),
 				'optional' => array(
@@ -396,52 +507,59 @@ class WP_AI_Workflows_Workflow_Translator {
 					'nodeName',
 				),
 			),
-			// @verified SentimentAnalysisNode.ts
+			// Builder + SentimentAnalysisNode.ts.
 			'sentimentAnalysis'  => array(
 				'required' => array(),
 				'optional' => array( 'content', 'model', 'settings', 'nodeName' ),
 			),
-			// @verified SummaryGeneratorNode.ts
+			// Builder + SummaryGeneratorNode.ts.
 			'summaryGenerator'   => array(
 				'required' => array(),
 				'optional' => array( 'content', 'maxLength', 'summaryStyle', 'model', 'settings', 'nodeName' ),
 			),
-			// @verified ExtractInformationNode.ts
+			// Builder + ExtractInformationNode.ts.
 			'extractInformation' => array(
 				'required' => array(),
 				'optional' => array( 'content', 'extractionFields', 'model', 'settings', 'nodeName' ),
 			),
-			// @verified WriteArticleNode.ts
+			// Builder + WriteArticleNode.ts.
 			'writeArticle'       => array(
 				'required' => array(),
 				'optional' => array( 'content', 'keywords', 'tone', 'wordCount', 'writingStyle', 'includeHeadings', 'includeConclusion', 'includeSources', 'model', 'settings', 'nodeName' ),
 			),
-			// @verified OptimizeSEONode.ts
+			// Builder + OptimizeSEONode.ts.
 			'optimizeSEO'        => array(
 				'required' => array(),
 				'optional' => array( 'content', 'keywords', 'seoFocus', 'targetLength', 'includeHeadings', 'includeMetaDescription', 'includeTitle', 'model', 'settings', 'nodeName' ),
 			),
-			// @verified MediaGeneratorNode.ts
+			// Builder + MediaGeneratorNode.ts. fieldValues carries the model's own
+			// input schema, so its keys change with the selected model.
 			'mediaGenerator'     => array(
-				'required' => array(),
-				'optional' => array( 'model', 'prompt', 'modelParams', 'fal', 'originalFileName', 'nodeName' ),
+				'required' => array( 'selectedModel' ),
+				'optional' => array( 'modelGroup', 'fieldValues', 'nodeName' ),
 			),
-			// @verified APICallNode.ts  (auth is the user's endpoint credential, not an AI provider key)
+			// Builder + APICallNode.ts (auth is the user's endpoint credential, not an AI provider key).
 			'apiCall'            => array(
 				'required' => array( 'url' ),
 				'optional' => array( 'method', 'headers', 'body', 'queryParams', 'auth', 'responseConfig', 'nodeName' ),
 			),
-			// @verified MCPClientNode.ts
+			// Builder + MCPClientNode.ts (the cloud re-checks the app connection itself).
 			'mcpClient'          => array(
+				'required' => array( 'appSlug', 'toolName' ),
+				'optional' => array( 'toolConfig', 'nodeName' ),
+			),
+			// Builder + LoopNodeV4.ts. Count and While loops are blocked upstream; the
+			// loop body is found from the edges leaving the `iteration` handle.
+			'loop'               => array(
 				'required' => array(),
-				'optional' => array( 'url', 'serverUrl', 'settings', 'nodeName' ),
+				'optional' => array( 'loopType', 'content', 'maxIterations', 'outputMode', 'continueOnError', 'nodeName' ),
 			),
 		);
 	}
 
 	/**
 	 * Build the `wpAction` node data ({action, payload}) for a WP-side-effect node.
-	 * The payload is a narrow, explicit allow-list per action — never the raw node
+	 * The payload is a narrow, explicit allow-list per action - never the raw node
 	 * data. WP_AI_Workflows_Platform_Callback validates + sanitizes it again on
 	 * receipt (fail-closed on both ends).
 	 *
@@ -466,7 +584,10 @@ class WP_AI_Workflows_Workflow_Translator {
 	/**
 	 * insert_post / update_post payload from a post (or output-post) node. Values are
 	 * carried verbatim (the cloud engine interpolates variables in node data before
-	 * the wpAction node runs); the WP callback sanitizes on receipt.
+	 * the wpAction node runs); the WP callback sanitizes on receipt. Non-core field
+	 * mappings (WooCommerce fields, custom meta) ride along under `product` / `meta`
+	 * when WP_AI_Workflows_Post_Fields is available; ACF mappings never forward here,
+	 * post_setting_reason() already refuses Cloud for those.
 	 *
 	 * @param array $data
 	 * @return array{action:string,payload:array}
@@ -487,10 +608,28 @@ class WP_AI_Workflows_Workflow_Translator {
 
 		$payload = array(
 			'title'     => $pick( array( $mappings['post_title'] ?? null, $data['title'] ?? null ) ),
+			'excerpt'   => $pick( array( $mappings['post_excerpt'] ?? null, $data['excerpt'] ?? null ) ),
 			'content'   => $pick( array( $mappings['post_content'] ?? null, $data['content'] ?? null ) ),
 			'status'    => $pick( array( $data['postStatus'] ?? null, $data['status'] ?? null ), 'draft' ),
 			'post_type' => $pick( array( $data['selectedPostType'] ?? null, $data['postType'] ?? null ), 'post' ),
 		);
+
+		if ( class_exists( 'WP_AI_Workflows_Post_Fields' ) ) {
+			$split     = WP_AI_Workflows_Post_Fields::split_mappings( $mappings, $payload['post_type'] );
+			$not_empty = static function ( $value ) {
+				return '' !== $value;
+			};
+
+			$product = array_filter( $split['product'], $not_empty );
+			if ( ! empty( $product ) ) {
+				$payload['product'] = $product;
+			}
+
+			$meta = array_filter( $split['meta'], $not_empty );
+			if ( ! empty( $meta ) ) {
+				$payload['meta'] = $meta;
+			}
+		}
 
 		// Update mode when the node targets an existing post id.
 		$post_id = isset( $data['postId'] ) ? $data['postId'] : ( isset( $data['post_id'] ) ? $data['post_id'] : null );
@@ -545,7 +684,7 @@ class WP_AI_Workflows_Workflow_Translator {
 		}
 
 		// Keep only allow-listed fields; never a provider key, never a local-only
-		// routing hint (keySource) — both are stripped for Cloud.
+		// routing hint (keySource) - both are stripped for Cloud.
 		$out = array();
 		foreach ( $allowed as $field ) {
 			if ( array_key_exists( $field, $data )

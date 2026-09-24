@@ -1,6 +1,6 @@
 <?php
 /**
- * Agent Orchestrator — the bounded, ReAct-style agentic loop.
+ * Agent Orchestrator - the bounded, ReAct-style agentic loop.
  *
  * Replaces the chat handler's single-round tool handling when Agent mode is ON:
  *   model(messages + governed tool schemas) -> if tool_calls: execute each via
@@ -106,7 +106,7 @@ class WP_AI_Workflows_Agent_Orchestrator {
 			// Snapshot the conversation BEFORE this batch's assistant turn so a
 			// confirmation-required pause can persist a clean, single-call resume
 			// state (no dangling sibling tool_call_ids). Args captured here are the
-			// exact ones the pause locks — the resume never re-plans them.
+			// exact ones the pause locks - the resume never re-plans them.
 			$batch_base = $messages;
 
 			// Record the assistant turn carrying the tool calls (contract for the
@@ -178,7 +178,7 @@ class WP_AI_Workflows_Agent_Orchestrator {
 					// Persist the exact state a later approval resumes from: the
 					// conversation up to (not including) this batch, the single
 					// pending call, and its LOCKED args. resume() replays only this
-					// call — the model never re-plans the arguments (no TOCTOU).
+					// call - the model never re-plans the arguments (no TOCTOU).
 					$pending = array(
 						'messages' => $batch_base,
 						'thought'  => $content,
@@ -254,7 +254,7 @@ class WP_AI_Workflows_Agent_Orchestrator {
 	 * Continue a run that paused for human approval.
 	 *
 	 * Approving executes ONLY the approved call, with the args LOCKED at pause
-	 * time (replayed from $pending, never re-planned by the model — no TOCTOU).
+	 * time (replayed from $pending, never re-planned by the model - no TOCTOU).
 	 * Rejecting injects a clean "owner declined" observation so the model answers
 	 * gracefully. In both cases the loop then continues normally to a final answer.
 	 *

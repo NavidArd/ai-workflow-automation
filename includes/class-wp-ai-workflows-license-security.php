@@ -232,7 +232,7 @@ class WP_AI_Workflows_License_Security {
 	 * Check the pre_http_request filter to catch interception attempts
 	 */
 	public static function pre_http_request_check( $pre, $args, $url ) {
-		// The 1.x SLM licensing server is retired in v2.0 — the plugin no longer
+		// The 1.x SLM licensing server is retired in v2.0 - the plugin no longer
 		// makes any outbound license request, so there is nothing to mark here.
 		// The hook is retained (returning $pre unchanged) purely for backward
 		// compatibility with the init() wiring.

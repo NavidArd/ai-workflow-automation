@@ -1,10 +1,10 @@
 <?php
 /**
- * Agent Approvals — the tool-approval surface + live-resume coordinator.
+ * Agent Approvals - the tool-approval surface + live-resume coordinator.
  *
  * Lists pending approvals for the Operator Inbox (a view over the human-tasks
  * rows, never forked state) and resolves one by replaying the LOCKED tool call
- * (args captured at pause time — no TOCTOU) through the orchestrator, delivering
+ * (args captured at pause time - no TOCTOU) through the orchestrator, delivering
  * the continuation live and auditing the outcome.
  *
  * @package WP_AI_Workflows
@@ -85,7 +85,7 @@ class WP_AI_Workflows_Agent_Approvals {
 				? (string) $content['label']
 				: self::describe( $tool, $args );
 
-			// The visitor's most recent message — context for the reviewer.
+			// The visitor's most recent message - context for the reviewer.
 			$last     = '';
 			$visitor  = '';
 			if ( '' !== $session_id ) {
@@ -190,7 +190,7 @@ class WP_AI_Workflows_Agent_Approvals {
 		$tool        = isset( $content['tool'] ) ? (string) $content['tool'] : '';
 		$args        = isset( $content['arguments'] ) && is_array( $content['arguments'] ) ? $content['arguments'] : array();
 
-		// Flip the durable task status first (shared with the Tasks page — one
+		// Flip the durable task status first (shared with the Tasks page - one
 		// state, two views). Reject/revert both map to a decline.
 		$human->update_task_status( $task_id, $approved ? 'approved' : 'rejected', (int) $user_id );
 
@@ -212,7 +212,7 @@ class WP_AI_Workflows_Agent_Approvals {
 		}
 
 		// Drop the durable resume copy now ($pending is already loaded into memory).
-		// The SESSION pending flag stays SET until the resumed reply is queued below —
+		// The SESSION pending flag stays SET until the resumed reply is queued below:
 		// clearing it early lets the widget's poll see approval_pending:false before
 		// anything is deliverable, so the reply lands in an empty queue (race fix).
 		delete_transient( 'wpaiw_agent_resume_' . $task_id );
@@ -258,7 +258,7 @@ class WP_AI_Workflows_Agent_Approvals {
 			);
 		}
 
-		// Clear the pause flag LAST — only after the reply is queued (see above).
+		// Clear the pause flag LAST - only after the reply is queued (see above).
 		if ( '' !== $session_id ) {
 			delete_transient( 'wpaiw_agent_pending_' . md5( $session_id ) );
 		}
@@ -343,7 +343,7 @@ class WP_AI_Workflows_Agent_Approvals {
 
 	/**
 	 * Write an audit row for an approval decision (mirrors the tool-execution
-	 * audit table schema). Best-effort — never throws.
+	 * audit table schema). Best-effort - never throws.
 	 *
 	 * @param string $session_id  Session id.
 	 * @param string $workflow_id Workflow id.

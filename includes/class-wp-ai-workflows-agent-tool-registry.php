@@ -1,6 +1,6 @@
 <?php
 /**
- * Agent Tool Registry — governed tool system for Agent mode. Applies per-tool
+ * Agent Tool Registry - governed tool system for Agent mode. Applies per-tool
  * enable, confirmation-required (reusing human-tasks), rate limiting, and a
  * full audit trail; fail-closed (unknown/disabled tools never run, executor
  * errors become a bounded observation, never fatal to the loop).
@@ -136,7 +136,7 @@ class WP_AI_Workflows_Agent_Tool_Registry {
 	}
 
 	/**
-	 * Execute a tool with all guardrails applied. Never throws — always returns
+	 * Execute a tool with all guardrails applied. Never throws - always returns
 	 * a structured result the loop can turn into an observation.
 	 *
 	 * Return shape: array{ status: 'ok'|'error'|'unknown_tool'|'disabled'
@@ -194,7 +194,7 @@ class WP_AI_Workflows_Agent_Tool_Registry {
 			);
 		}
 
-		// Execute — bounded, fail-safe.
+		// Execute - bounded, fail-safe.
 		try {
 			$result  = $tool->execute( $args, $ctx );
 			$summary = $this->summarize( $result );

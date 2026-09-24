@@ -1,6 +1,6 @@
 <?php
 /**
- * Agent Tools builder — adapts existing plugin capabilities (and a couple of
+ * Agent Tools builder - adapts existing plugin capabilities (and a couple of
  * safe built-ins) into governed {@see WP_AI_Workflows_Agent_Tool} instances and
  * loads them into a {@see WP_AI_Workflows_Agent_Tool_Registry}.
  *
@@ -34,7 +34,7 @@ class WP_AI_Workflows_Agent_Tools {
 	 * @param array    $actions           data.actions (chat "actions").
 	 * @param mixed    $openai_tools      data.openaiTools (native search config).
 	 * @param mixed    $knowledge_base    data.knowledgeBase config.
-	 * @param callable $action_dispatcher fn(string $action_id, array $args):string — dispatches the action workflow, returns an observation.
+	 * @param callable $action_dispatcher fn(string $action_id, array $args):string - dispatches the action workflow, returns an observation.
 	 * @return WP_AI_Workflows_Agent_Tool_Registry
 	 */
 	public static function build_registry( $session_id, $workflow_id, $agent_config, $actions, $openai_tools, $knowledge_base, $action_dispatcher ) {
@@ -71,7 +71,7 @@ class WP_AI_Workflows_Agent_Tools {
 			WP_AI_Workflows_Agent_Content_Tools::register( $registry, $overrides );
 		}
 
-		// 6) Human handoff (Phase 2a) — only when handoff is enabled on the node.
+		// 6) Human handoff (Phase 2a) - only when handoff is enabled on the node.
 		//    The agent can call handoff_to_human to pass control to a person.
 		if ( is_array( $agent_config )
 			&& class_exists( 'WP_AI_Workflows_Handoff_Manager' )
@@ -85,7 +85,7 @@ class WP_AI_Workflows_Agent_Tools {
 	/**
 	 * Register the governed `handoff_to_human` tool. When the agent calls it, the
 	 * configured provider opens a handoff and the conversation flips to human
-	 * control (the bot then stops auto-responding — enforced by the chat handler).
+	 * control (the bot then stops auto-responding - enforced by the chat handler).
 	 *
 	 * @param WP_AI_Workflows_Agent_Tool_Registry $registry    Registry.
 	 * @param string                               $session_id  Session id.
@@ -159,7 +159,7 @@ class WP_AI_Workflows_Agent_Tools {
 	}
 
 	private static function register_builtins( $registry, $overrides ) {
-		// calculator — structured, eval-free arithmetic.
+		// calculator - structured, eval-free arithmetic.
 		$registry->register(
 			new WP_AI_Workflows_Agent_Tool(
 				'calculator',
@@ -189,7 +189,7 @@ class WP_AI_Workflows_Agent_Tools {
 			)
 		);
 
-		// get_datetime — current server date/time, structured.
+		// get_datetime - current server date/time, structured.
 		$registry->register(
 			new WP_AI_Workflows_Agent_Tool(
 				'get_datetime',

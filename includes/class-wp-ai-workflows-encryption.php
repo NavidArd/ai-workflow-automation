@@ -5,8 +5,8 @@
  *
  * Threat model: protect secrets stored in the WordPress options table so a DB
  * dump alone does not expose them. The encryption key is anchored to the site's
- * SECURE_AUTH_KEY salt (never stored in the DB), or — on a misconfigured host
- * where that salt is absent — to a random key stored in an autoloaded option
+ * SECURE_AUTH_KEY salt (never stored in the DB), or - on a misconfigured host
+ * where that salt is absent - to a random key stored in an autoloaded option
  * (best anchor available on such a host; strictly better than a hard-coded
  * literal that would be identical across every install).
  *
@@ -16,7 +16,7 @@
  * literal "waf2:" prefix, e.g.  waf2:<base64( iv[12] . tag[16] . ciphertext )>.
  * The prefix contains ':' which is NOT in the base64 alphabet, so it can never
  * collide with a legacy value (legacy values are pure base64). That gives the
- * decryptor an unambiguous, self-describing way to dispatch by format — the
+ * decryptor an unambiguous, self-describing way to dispatch by format - the
  * reason GCM-with-versioning is safe to adopt here rather than staying on
  * CBC+HMAC.
  *
@@ -288,7 +288,7 @@ class WP_AI_Workflows_Encryption {
 		if ( defined( 'SECURE_AUTH_KEY' ) && '' !== (string) SECURE_AUTH_KEY ) {
 			$candidates[] = SECURE_AUTH_KEY;
 		}
-		// The old literal fallback — kept ONLY for decrypting pre-existing data.
+		// The old literal fallback - kept ONLY for decrypting pre-existing data.
 		$candidates[] = 'fallback-key';
 		// A random anchor could only ever have keyed modern (GCM) data, so it is
 		// intentionally not a CBC candidate.

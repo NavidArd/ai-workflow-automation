@@ -43,7 +43,7 @@
       "fieldsFrom": "selectedFields",
       "jsonExtractable": true,
       "reference": "[Input from {id}] for the whole payload; [[Field Label] from {id}] for a specific form/webhook field",
-      "note": "A manual trigger produces one text blob ([Input from {id}]). Form/webhook/RSS triggers expose named fields whose names are the submitted field labels/keys — these are known only at runtime, so [[label] from {id}] references are ALLOWED and are NOT hard-failed by the validator."
+      "note": "A manual trigger produces one text blob ([Input from {id}]). Form/webhook/RSS triggers expose named fields whose names are the submitted field labels/keys; these are known only at runtime, so [[label] from {id}] references are ALLOWED and are NOT hard-failed by the validator."
     }
   }
 }

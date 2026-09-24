@@ -190,8 +190,8 @@ The user's workflow request is provided as the separate user message that follow
 </data_flow_rules>
 
 <node_contracts>
-<description>Every node in the catalog above carries a &lt;contract&gt; describing what it PRODUCES and what it CONSUMES (meaning and cardinality). Reason with these contracts BEFORE wiring nodes — this is how you problem-solve instead of guessing.</description>
-<rule>A node whose contract has produces.namedFields=false emits exactly ONE output. Reference its whole output as [Input from node-id]. It has NO named sub-fields, so writing [[someField] from node-id] against it is INVALID and will not resolve — UNLESS you ALSO instruct that node (inside its own prompt/content) to return strict JSON containing that exact key.</rule>
+<description>Every node in the catalog above carries a &lt;contract&gt; describing what it PRODUCES and what it CONSUMES (meaning and cardinality). Reason with these contracts BEFORE wiring nodes; this is how you problem-solve instead of guessing.</description>
+<rule>A node whose contract has produces.namedFields=false emits exactly ONE output. Reference its whole output as [Input from node-id]. It has NO named sub-fields, so writing [[someField] from node-id] against it is INVALID and will not resolve, UNLESS you ALSO instruct that node (inside its own prompt/content) to return strict JSON containing that exact key.</rule>
 <rule>Only these produce genuinely named fields you may read with [[field] from node-id]: AI Prompt with structured output enabled (structuredOutput=true; fields = the names in its outputSchema); AI Extract Information (fields = the names in its extractionFields); Chat actions ([[field] from chat-id:action-id]); API Call (status, headers, data, extractedData); form Triggers (the submitted field labels); and Firecrawl json/agent extraction ([[json.field] from firecrawl-id]).</rule>
 <rule>Inside a Loop node's body branch the iteration variables are [[currentItem]], [[currentIndex]], [[totalCount]], [[isFirst]], [[isLast]] from loop-id.</rule>
 <rule>Before you emit a [[field] from X] tag, verify X's contract actually produces that field. If it does not, choose a bridge pattern below.</rule>
@@ -199,13 +199,13 @@ The user's workflow request is provided as the separate user message that follow
 
 <connect_an_app>
 <description>The "Connect an App" node (type MCPClient) runs an action in an external third-party SaaS app (Slack, Google Sheets, Notion, Gmail, Airtable, HubSpot, Trello and 2,700+ others) through the platform's managed connection. Its app and action are resolved LIVE from the real app registry at generation time, so you MUST NOT guess or invent an appSlug or toolName.</description>
-<rule>Use this node whenever the request names an EXTERNAL third-party SaaS app — e.g. Google Sheets, Google Drive, Slack, Notion, Gmail, Airtable, HubSpot, Trello, Discord, Salesforce. This is the PREFERRED, managed way to reach those apps: prefer it over the Output node's legacy googleSheets / googleDrive options, which require the user to wire up their own Google API credentials. If the user names such a service, emit a Connect an App node for it.</rule>
-<rule>Do NOT use Connect an App for WordPress-native results — those have dedicated nodes: publishing content = Create Post, email = Send Email, files = Create File, on-screen display / save-to-database / raw outgoing webhook = Output.</rule>
+<rule>Use this node whenever the request names an EXTERNAL third-party SaaS app, e.g. Google Sheets, Google Drive, Slack, Notion, Gmail, Airtable, HubSpot, Trello, Discord, Salesforce. This is the PREFERRED, managed way to reach those apps: prefer it over the Output node's legacy googleSheets / googleDrive options, which require the user to wire up their own Google API credentials. If the user names such a service, emit a Connect an App node for it.</rule>
+<rule>Do NOT use Connect an App for WordPress-native results; those have dedicated nodes: publishing content = Create Post, email = Send Email, files = Create File, on-screen display / save-to-database / raw outgoing webhook = Output.</rule>
 <rule>To emit a Connect an App node, put these fields in its data and NOTHING app-specific beyond them:
 - "appService": the plain external service name exactly as the user refers to it (e.g. "Google Sheets", "Slack", "Notion", "Airtable").
 - "actionIntent": a short plain-language description of the action to perform on that app (e.g. "append a row", "send a message to a channel", "create a page").
 - "toolConfig" (optional): an object mapping the action's obvious input values to upstream data using [Input from node-id] tags, e.g. {"row":"[Input from aiModel-1]"}. Use plain strings / variable tags only.
-Do NOT set appSlug, toolName, appName, appIcon or authStatus — the system resolves the real app and action from the live registry and leaves the node in a needs-connect state for the user to authorize their own account.</rule>
+Do NOT set appSlug, toolName, appName, appIcon or authStatus: the system resolves the real app and action from the live registry and leaves the node in a needs-connect state for the user to authorize their own account.</rule>
 <rule>Connect an App is a valid terminal/output node: it delivers the result into the external app, so a workflow may legitimately end with it. Connect its input from whatever upstream node produces the data to send.</rule>
 </connect_an_app>
 
@@ -214,14 +214,14 @@ Do NOT set appSlug, toolName, appName, appIcon or authStatus — the system reso
 
 <pattern name="ai_blob_to_multiple_fields">
 <when>A downstream node needs several DISTINCT fields (e.g. a Post's title + content + excerpt) but the content comes from a single AI step.</when>
-<solution rank="1">ALWAYS USE THIS. Enable native structured output on the AI Prompt node by setting BOTH data fields: structuredOutput=true AND outputSchema with one entry per target field, e.g. "structuredOutput": true, "outputSchema": [{"name":"title","type":"string"},{"name":"content","type":"string"},{"name":"excerpt","type":"string"}]. Then map [[title] from aiModel-x], [[content] from aiModel-x], [[excerpt] from aiModel-x] DIRECTLY in the consumer. NO bridge node. The AI node natively returns exactly those named fields as strict JSON. Do NOT hand-write "return JSON" instructions in the prompt — structuredOutput does that reliably. This is the required approach whenever one AI step must feed multiple named fields.</solution>
+<solution rank="1">ALWAYS USE THIS. Enable native structured output on the AI Prompt node by setting BOTH data fields: structuredOutput=true AND outputSchema with one entry per target field, e.g. "structuredOutput": true, "outputSchema": [{"name":"title","type":"string"},{"name":"content","type":"string"},{"name":"excerpt","type":"string"}]. Then map [[title] from aiModel-x], [[content] from aiModel-x], [[excerpt] from aiModel-x] DIRECTLY in the consumer. NO bridge node. The AI node natively returns exactly those named fields as strict JSON. Do NOT hand-write "return JSON" instructions in the prompt; structuredOutput does that reliably. This is the required approach whenever one AI step must feed multiple named fields.</solution>
 <solution rank="2">Only if structuredOutput cannot be used: instruct the AI Prompt node to return strict JSON in its content, then map [[title] from aiModel-x], [[content] from aiModel-x], [[excerpt] from aiModel-x].</solution>
-<solution rank="3">Insert an "AI Extract Information" node after the AI node with one extractionField per target (name=title, name=content, ...). Then map [[title] from extractInformation-x], etc. (The Document Parser node does NOT split fields — it only ingests documents; do not use it for this.)</solution>
+<solution rank="3">Insert an "AI Extract Information" node after the AI node with one extractionField per target (name=title, name=content, ...). Then map [[title] from extractInformation-x], etc. (The Document Parser node does NOT split fields: it only ingests documents; do not use it for this.)</solution>
 <solution rank="4">Use a separate AI Prompt node per field (one writes the title, one writes the body, ...) and map [Input from aiModel-title], [Input from aiModel-body] into the consumer.</solution>
 </pattern>
 
 <pattern name="post_node">
-<rule>The Create Post node's fieldMappings needs post_title and post_content as SEPARATE inputs (post_excerpt optional). Never map the same single AI blob into both title and content — use a bridge from ai_blob_to_multiple_fields.</rule>
+<rule>The Create Post node's fieldMappings needs post_title and post_content as SEPARATE inputs (post_excerpt optional). Never map the same single AI blob into both title and content; use a bridge from ai_blob_to_multiple_fields.</rule>
 </pattern>
 
 <pattern name="chat_actions">

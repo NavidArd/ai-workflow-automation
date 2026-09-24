@@ -2,9 +2,9 @@
   "type": "generatePdf",
   "label": "Generate PDF",
   "category": "Content & Media",
-  "description": "Renders a polished PDF from a built-in template (invoice, report, letter, certificate, proposal, one-pager) or your own custom HTML/CSS. Rendering runs on the cloud render service and is metered in credits — the node calls it from your site, so a connected account is required.",
+  "description": "Renders a polished PDF from a built-in template (invoice, report, letter, certificate, proposal, one-pager) or your own custom HTML/CSS. Rendering runs on the cloud render service and is metered in credits; the node calls it from your site, so a connected account is required.",
   "capabilities": ["PDF generation", "templated documents", "custom HTML to PDF", "invoice/report/letter/certificate/proposal rendering"],
-  "modes": ["cloud"],
+  "modes": ["local"],
   "credits": 2,
   "config": [
     { "name": "sourceMode", "type": "enum", "required": true, "default": "template",

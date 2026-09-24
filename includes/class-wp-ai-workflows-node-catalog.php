@@ -1,6 +1,6 @@
 <?php
 /**
- * WP_AI_Workflows_Node_Catalog — source-of-truth registry for node capability
+ * WP_AI_Workflows_Node_Catalog - source-of-truth registry for node capability
  * manifests, loaded from includes/nodes/manifests/*.json and validated against
  * includes/nodes/manifest.schema.json (kept in sync with
  * frontend/src/components/nodes/nodeTypes.js and the executor switch in
@@ -114,7 +114,7 @@ class WP_AI_Workflows_Node_Catalog {
 	}
 
 	/**
-	 * The config field schema for a node type — the shape used to render the
+	 * The config field schema for a node type - the shape used to render the
 	 * builder form AND to validate generated/imported node `data`. Returns the
 	 * manifest's `config[]` array, or null if the type is unknown.
 	 *
@@ -265,7 +265,7 @@ class WP_AI_Workflows_Node_Catalog {
 	/**
 	 * Normalize a manifest's contract: merge its explicit `contract` block over a
 	 * default derived from existing manifest fields (config → consumed fields,
-	 * single text-blob output). Deterministic — safe for the cacheable prompt.
+	 * single text-blob output). Deterministic - safe for the cacheable prompt.
 	 *
 	 * @param string $type Canonical node type.
 	 * @param array  $m    Manifest.
@@ -337,7 +337,7 @@ class WP_AI_Workflows_Node_Catalog {
 	/**
 	 * Load every manifest file, decode it, and validate it against the JSON
 	 * Schema. Invalid manifests are skipped (the CI guard is what turns an
-	 * invalid/missing manifest into a hard failure — see the guard test).
+	 * invalid/missing manifest into a hard failure - see the guard test).
 	 *
 	 * @return array<string,array> type => manifest.
 	 */

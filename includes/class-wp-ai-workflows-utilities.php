@@ -136,7 +136,7 @@ class WP_AI_Workflows_Utilities {
 	 *
 	 * Everything here is either non-sensitive environment metadata or a boolean
 	 * "configured / not configured" flag. API keys, secrets and tokens are NEVER
-	 * included — only whether a given provider key is present.
+	 * included - only whether a given provider key is present.
 	 *
 	 * @return string The assembled report, newline-terminated.
 	 */
@@ -144,7 +144,7 @@ class WP_AI_Workflows_Utilities {
 		global $wpdb;
 
 		$lines   = array();
-		$lines[] = '=== AI Workflow Automation — Diagnostic Report ===';
+		$lines[] = '=== AI Workflow Automation - Diagnostic Report ===';
 		$lines[] = 'Generated: ' . current_time( 'mysql' ) . ' (site time)';
 		$lines[] = '';
 
@@ -216,7 +216,7 @@ class WP_AI_Workflows_Utilities {
 				$lines[] = '(log file is empty)';
 			}
 		} else {
-			$lines[] = '(no debug log written — enable WP_AI_WORKFLOWS_DEBUG to capture detailed runtime logs)';
+			$lines[] = '(no debug log written: enable WP_AI_WORKFLOWS_DEBUG to capture detailed runtime logs)';
 		}
 		$lines[] = '';
 		$lines[] = '=== End of report ===';
@@ -1063,7 +1063,7 @@ class WP_AI_Workflows_Utilities {
 	 * @param array  $body  Request body, modified in place.
 	 * @param string $param Parameter name reported as unsupported.
 	 * @return bool True if the body was changed (safe to retry), false if the
-	 *              param wasn't present (nothing to strip — don't loop again).
+	 *              param wasn't present (nothing to strip - don't loop again).
 	 */
 	public static function strip_unsupported_openai_param( array &$body, $param ) {
 		if ( 'max_tokens' === $param && isset( $body['max_tokens'] ) ) {
@@ -1110,7 +1110,7 @@ class WP_AI_Workflows_Utilities {
 			}
 		}
 
-		// Reasoning models only accept the DEFAULT sampling params — sending
+		// Reasoning models only accept the DEFAULT sampling params - sending
 		// a custom temperature/top_p/penalty is a hard 400. Omit them
 		// entirely for those models; non-reasoning models keep prior behavior.
 		if ( ! $reasoning ) {
@@ -1120,8 +1120,8 @@ class WP_AI_Workflows_Utilities {
 			$body['presence_penalty']  = isset( $parameters['presence_penalty'] ) ? floatval( $parameters['presence_penalty'] ) : 0.0;
 		}
 
-		// Structured output (JSON-Schema). Model-family-agnostic — valid for both
-		// reasoning and non-reasoning OpenAI chat models — so it sits outside the
+		// Structured output (JSON-Schema). Model-family-agnostic - valid for both
+		// reasoning and non-reasoning OpenAI chat models - so it sits outside the
 		// sampling-param block above.
 		if ( isset( $parameters['response_format'] ) && is_array( $parameters['response_format'] ) ) {
 			$body['response_format'] = $parameters['response_format'];
@@ -1141,7 +1141,7 @@ class WP_AI_Workflows_Utilities {
 	 * @param string $model
 	 * @param array  $imageUrls
 	 * @param array  $parameters
-	 * @param bool   $is_fallback_retry Internal — true on the one-shot retry, prevents recursion.
+	 * @param bool   $is_fallback_retry Internal - true on the one-shot retry, prevents recursion.
 	 * @return array|WP_Error
 	 */
 	public static function call_openai_api( $prompt, $model, $imageUrls = array(), $parameters = array(), $is_fallback_retry = false ) {
@@ -1227,7 +1227,7 @@ class WP_AI_Workflows_Utilities {
 			) {
 				$stripped_params[ $bad_param ] = true;
 				self::debug_log(
-					'OpenAI rejected a request parameter — stripping and retrying once',
+					'OpenAI rejected a request parameter, stripping and retrying once',
 					'warning',
 					array(
 						'model' => $model,
@@ -1250,7 +1250,7 @@ class WP_AI_Workflows_Utilities {
 				&& self::is_model_unavailable_error( $response_code, $error_code, $error_type, $error_message )
 			) {
 				self::debug_log(
-					'OpenAI model unavailable/invalid for this BYOK key — downgrading to fallback model',
+					'OpenAI model unavailable/invalid for this BYOK key, downgrading to fallback model',
 					'warning',
 					array(
 						'requested_model' => $model,
@@ -1347,7 +1347,7 @@ class WP_AI_Workflows_Utilities {
 		$clean_model = strpos( $model, 'openai/' ) === 0 ? substr( $model, 7 ) : $model;
 
 		// Reasoning models reject a non-default temperature/top_p outright
-		// (HTTP 400) — omit them entirely for those models, same rule
+		// (HTTP 400) - omit them entirely for those models, same rule
 		// `build_openai_chat_body()` applies to the Chat Completions endpoint.
 		$is_reasoning_model = self::is_reasoning_model( $clean_model );
 
@@ -1415,7 +1415,7 @@ class WP_AI_Workflows_Utilities {
 			) {
 				$stripped_params[ $bad_param ] = true;
 				self::debug_log(
-					'OpenAI rejected a request parameter — stripping and retrying once',
+					'OpenAI rejected a request parameter, stripping and retrying once',
 					'warning',
 					array(
 						'model' => $clean_model,

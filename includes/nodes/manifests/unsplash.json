@@ -19,6 +19,6 @@
   "example": { "nodeName": "Find Photo", "searchTerm": "mountain sunrise", "imageSize": "regular", "orientation": "landscape" },
   "keywords": ["unsplash", "image", "photo", "stock", "picture", "media"],
   "contract": {
-    "produces": { "kind": "media", "cardinality": "single", "namedFields": false, "jsonExtractable": false, "reference": "[Input from {id}]", "note": "Produces ONE image URL. One photo per execution — add more Unsplash nodes for more photos." }
+    "produces": { "kind": "media", "cardinality": "single", "namedFields": false, "jsonExtractable": false, "reference": "[Input from {id}]", "note": "Produces ONE image URL. One photo per execution; add more Unsplash nodes for more photos." }
   }
 }

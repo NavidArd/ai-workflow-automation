@@ -65,7 +65,7 @@ class WP_AI_Workflows_Chat_Embedder {
 				'wooActive' => class_exists( 'WooCommerce' ),
 				'wcAjaxUrl' => class_exists( 'WC_AJAX' ) ? WC_AJAX::get_endpoint( 'add_to_cart' ) : '',
 				// Gates the visitor-facing widget's diagnostic logger
-				// (frontend/src/utils/debug.js). FALSE by default — visitors must
+				// (frontend/src/utils/debug.js). FALSE by default - visitors must
 				// see essentially nothing in the console. Set WP_AI_WORKFLOWS_DEBUG
 				// to true in wp-config.php to surface debug.log()/debug.warn().
 				'debug'     => defined( 'WP_AI_WORKFLOWS_DEBUG' ) && WP_AI_WORKFLOWS_DEBUG,
@@ -78,8 +78,8 @@ class WP_AI_Workflows_Chat_Embedder {
 		if ( ! $this->script_loaded ) {
 			// Intentionally NOT enqueuing the 'wp-ai-workflows-app' stylesheet here.
 			// The chat widget renders inside a Shadow DOM (frontend/src/index.js
-			// injects chat.css directly into the shadow root), so it does not need
-			// — and must not load — the full React app stylesheet (antd + global
+			// injects chat.css directly into the shadow root), so it does not need,
+			// and must not load, the full React app stylesheet (antd + global
 			// resets) on public pages. Loading it globally clobbers the active
 			// theme's layout/typography for every visitor. The script is still
 			// needed to boot the widget bundle.

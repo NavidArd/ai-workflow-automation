@@ -26,7 +26,7 @@
     "produces": { "kind": "terminal", "cardinality": "single", "reference": "[Input from {id}]", "note": "Sends the email; usually a workflow endpoint." },
     "consumes": {
       "distinctFields": ["to", "subject", "body"],
-      "note": "to, subject and body are distinct required inputs. body may be a single AI text blob ([Input from aiModel-x]); to/subject are usually short values from the trigger or a dedicated node. Reference upstream text as [Input from node-id] — do not invent [[field]] tags on plain AI nodes."
+      "note": "to, subject and body are distinct required inputs. body may be a single AI text blob ([Input from aiModel-x]); to/subject are usually short values from the trigger or a dedicated node. Reference upstream text as [Input from node-id]; do not invent [[field]] tags on plain AI nodes."
     }
   }
 }

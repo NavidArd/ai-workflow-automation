@@ -1,11 +1,11 @@
 <?php
 /**
- * WP_AI_Workflows_Platform_Callback — the cloud→WordPress action executor.
+ * WP_AI_Workflows_Platform_Callback - the cloud→WordPress action executor.
  * Receives HMAC-signed callbacks from the platform and dispatches a narrow,
  * named, allow-listed set of WordPress mutations, verified before dispatch:
  * signature, then timestamp window, then nonce replay/idempotency.
  *
- * Auth is the HMAC signature — the REST route is intentionally PUBLIC
+ * Auth is the HMAC signature - the REST route is intentionally PUBLIC
  * (`permission_callback => '__return_true'`). Actions run as the system,
  * never with a user's elevated capabilities; `manage_options`-level
  * mutations are deliberately not in the allow-list.
@@ -22,7 +22,7 @@ class WP_AI_Workflows_Platform_Callback {
 	/** ±window (seconds) the request timestamp must fall within (replay protection). */
 	const TIMESTAMP_WINDOW = 300;
 
-	/** Nonce transient TTL (seconds) — doubles as the idempotency cache lifetime. */
+	/** Nonce transient TTL (seconds) - doubles as the idempotency cache lifetime. */
 	const NONCE_TTL = 600;
 
 	/** Transient key prefix for the per-nonce idempotency record. */
@@ -118,12 +118,12 @@ class WP_AI_Workflows_Platform_Callback {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Action handlers — each validates its own payload (fail-closed) and runs as
+	 * Action handlers - each validates its own payload (fail-closed) and runs as
 	 * the system. No user-context escalation; no privileged (options/users) writes.
 	 * ------------------------------------------------------------------------- */
 
 	/**
-	 * save_output — insert a sanitized row into a plugin/custom output table
+	 * save_output - insert a sanitized row into a plugin/custom output table
 	 * (mirrors execute_output_node's `save` logic, but narrower: explicit,
 	 * pre-resolved values only).
 	 *
@@ -134,7 +134,7 @@ class WP_AI_Workflows_Platform_Callback {
 		global $wpdb;
 
 		$table = isset( $payload['table'] ) ? (string) $payload['table'] : 'wp_ai_workflows_outputs';
-		// Allow only alphanumerics + underscore, then prefix — never interpolate raw.
+		// Allow only alphanumerics + underscore, then prefix - never interpolate raw.
 		$table = preg_replace( '/[^a-zA-Z0-9_]/', '', $table );
 		if ( '' === $table ) {
 			return new WP_Error( 'invalid_payload', 'A valid table name is required.', array( 'status' => 400 ) );
@@ -188,10 +188,10 @@ class WP_AI_Workflows_Platform_Callback {
 	}
 
 	/**
-	 * insert_post — create a WordPress post from a sanitized payload.
+	 * insert_post - create a WordPress post from a sanitized payload.
 	 *
-	 * @param array $payload {title, content, status, post_type}
-	 * @return array|WP_Error {post_id, status, post_type}
+	 * @param array $payload {title, content, status, post_type, product?, meta?}
+	 * @return array|WP_Error {post_id, status, post_type, fields}
 	 */
 	public static function action_insert_post( array $payload ) {
 		$post_data = self::build_post_data( $payload, false );
@@ -205,18 +205,21 @@ class WP_AI_Workflows_Platform_Callback {
 			return new WP_Error( 'insert_failed', 'Failed to create post.', array( 'status' => 500 ) );
 		}
 
+		$written = self::apply_extra_fields( (int) $post_id, $post_data['post_type'], $payload );
+
 		return array(
 			'post_id'   => (int) $post_id,
 			'status'    => $post_data['post_status'],
 			'post_type' => $post_data['post_type'],
+			'fields'    => $written,
 		);
 	}
 
 	/**
-	 * update_post — update an existing WordPress post (ID must exist + type check).
+	 * update_post - update an existing WordPress post (ID must exist + type check).
 	 *
-	 * @param array $payload {id, title?, content?, status?, post_type?}
-	 * @return array|WP_Error {post_id}
+	 * @param array $payload {id, title?, excerpt?, content?, status?, post_type?, product?, meta?}
+	 * @return array|WP_Error {post_id, fields}
 	 */
 	public static function action_update_post( array $payload ) {
 		$post_id = isset( $payload['id'] ) ? absint( $payload['id'] ) : 0;
@@ -235,21 +238,31 @@ class WP_AI_Workflows_Platform_Callback {
 		if ( isset( $payload['content'] ) ) {
 			$update['post_content'] = wp_kses_post( (string) $payload['content'] );
 		}
+		if ( isset( $payload['excerpt'] ) ) {
+			$update['post_excerpt'] = wp_kses_post( (string) $payload['excerpt'] );
+		}
 		if ( isset( $payload['status'] ) ) {
 			$update['post_status'] = self::sanitize_post_status( (string) $payload['status'] );
 		}
 
-		if ( count( $update ) <= 1 ) {
+		$has_product = ! empty( $payload['product'] ) && is_array( $payload['product'] );
+		$has_meta    = ! empty( $payload['meta'] ) && is_array( $payload['meta'] );
+
+		if ( count( $update ) <= 1 && ! $has_product && ! $has_meta ) {
 			return new WP_Error( 'invalid_payload', 'No updatable fields were provided.', array( 'status' => 400 ) );
 		}
 
-		$result = wp_update_post( $update, true );
-		if ( is_wp_error( $result ) ) {
-			WP_AI_Workflows_Utilities::debug_log( 'Callback update_post error: ' . $result->get_error_code(), 'error' );
-			return new WP_Error( 'update_failed', 'Failed to update post.', array( 'status' => 500 ) );
+		if ( count( $update ) > 1 ) {
+			$result = wp_update_post( $update, true );
+			if ( is_wp_error( $result ) ) {
+				WP_AI_Workflows_Utilities::debug_log( 'Callback update_post error: ' . $result->get_error_code(), 'error' );
+				return new WP_Error( 'update_failed', 'Failed to update post.', array( 'status' => 500 ) );
+			}
 		}
 
-		return array( 'post_id' => (int) $post_id );
+		$written = self::apply_extra_fields( $post_id, $existing->post_type, $payload );
+
+		return array( 'post_id' => (int) $post_id, 'fields' => $written );
 	}
 
 	/**
@@ -280,6 +293,10 @@ class WP_AI_Workflows_Platform_Callback {
 			'post_type'    => $post_type,
 		);
 
+		if ( isset( $payload['excerpt'] ) && '' !== (string) $payload['excerpt'] ) {
+			$post_data['post_excerpt'] = wp_kses_post( (string) $payload['excerpt'] );
+		}
+
 		// Attribute to a configured author if the site set one; otherwise leave 0
 		// (wp_insert_post applies its own defaults). Never elevate to a user context.
 		$author = (int) apply_filters( 'wp_ai_workflows_callback_post_author', 0, $payload );
@@ -300,6 +317,65 @@ class WP_AI_Workflows_Platform_Callback {
 		$allowed = array( 'draft', 'publish', 'pending', 'private', 'future' );
 		$status  = sanitize_key( $status );
 		return in_array( $status, $allowed, true ) ? $status : 'draft';
+	}
+
+	/**
+	 * Apply the optional product and meta sections of a post payload.
+	 *
+	 * @param int    $post_id
+	 * @param string $post_type
+	 * @param array  $payload
+	 * @return array<int,string> Field and meta keys written.
+	 */
+	private static function apply_extra_fields( $post_id, $post_type, array $payload ) {
+		if ( ! class_exists( 'WP_AI_Workflows_Post_Fields' ) ) {
+			return array();
+		}
+
+		$product_in = ( ! empty( $payload['product'] ) && is_array( $payload['product'] ) ) ? $payload['product'] : array();
+		$meta_in    = ( ! empty( $payload['meta'] ) && is_array( $payload['meta'] ) ) ? $payload['meta'] : array();
+		$is_product = WP_AI_Workflows_Post_Fields::is_product_post_type( $post_type );
+
+		$product_values = array();
+		$meta_values    = array();
+
+		foreach ( $product_in as $key => $value ) {
+			if ( ! is_string( $key ) || ! is_scalar( $value ) || '' === $value ) {
+				continue;
+			}
+			if ( $is_product && WP_AI_Workflows_Post_Fields::is_product_field( $key ) ) {
+				$product_values[ $key ] = $value;
+			} else {
+				$meta_values[ $key ] = $value;
+			}
+		}
+
+		foreach ( $meta_in as $key => $value ) {
+			if ( ! is_string( $key ) || ! is_scalar( $value ) || '' === $value ) {
+				continue;
+			}
+			$meta_values[ $key ] = $value;
+		}
+
+		$written = array();
+
+		if ( ! empty( $product_values ) ) {
+			$written = array_merge( $written, WP_AI_Workflows_Post_Fields::apply_product_fields( $post_id, $product_values ) );
+		}
+
+		$meta_values = array_filter(
+			$meta_values,
+			static function ( $key ) {
+				return ! WP_AI_Workflows_Post_Fields::is_core_field( $key );
+			},
+			ARRAY_FILTER_USE_KEY
+		);
+
+		if ( ! empty( $meta_values ) ) {
+			$written = array_merge( $written, WP_AI_Workflows_Post_Fields::apply_meta( $post_id, $meta_values ) );
+		}
+
+		return $written;
 	}
 
 	/* ---------------------------------------------------------------------------
@@ -346,11 +422,11 @@ class WP_AI_Workflows_Platform_Callback {
 	}
 
 	/**
-	 * A pre-dispatch rejection (never cached — auth/timestamp/replay failures).
+	 * A pre-dispatch rejection (never cached - auth/timestamp/replay failures).
 	 *
 	 * @param int    $status
 	 * @param string $code
-	 * @param string $message  Generic, machine-readable — never echoes the payload.
+	 * @param string $message  Generic, machine-readable - never echoes the payload.
 	 * @param string $log_reason Internal reason for the (payload-free) debug log.
 	 * @return WP_REST_Response
 	 */

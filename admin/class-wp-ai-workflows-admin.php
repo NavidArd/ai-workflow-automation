@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WP_AI_Workflows_Admin {
 	const OPTION_WELCOME_NOTICE = 'wp_ai_workflows_welcome_notice';
 	const DISMISS_WELCOME_ACTION = 'wp_ai_workflows_dismiss_welcome';
+	const OPTION_ANALYTICS_NOTICE_DISMISSED = 'wp_ai_workflows_analytics_notice_dismissed';
+	const ANALYTICS_NOTICE_ACTION = 'wp_ai_workflows_analytics_choice';
 
 	private $license_manager;
 
@@ -22,7 +24,9 @@ class WP_AI_Workflows_Admin {
 		add_action( 'wp_ajax_wp_ai_workflows_update_menu_count', array( $this, 'ajax_update_menu_count' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_render_legacy_welcome_notice' ) );
 		add_action( 'admin_notices', array( $this, 'maybe_render_welcome_notice' ) );
+		add_action( 'admin_notices', array( $this, 'maybe_render_analytics_notice' ) );
 		add_action( 'admin_init', array( $this, 'handle_welcome_notice_dismiss' ) );
+		add_action( 'admin_post_wp_ai_workflows_analytics_choice', array( $this, 'handle_analytics_notice_choice' ) );
 	}
 
 	/**
@@ -84,6 +88,87 @@ class WP_AI_Workflows_Admin {
 	}
 
 	/**
+	 * One-time, dismissible opt-in notice for anonymous usage analytics. Shown
+	 * only to a site that already finished onboarding (new users get the
+	 * checkbox in onboarding instead).
+	 *
+	 * @return void
+	 */
+	public function maybe_render_analytics_notice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$screen = get_current_screen();
+		if ( null === $screen || ! in_array( $screen->id, array( 'toplevel_page_wp-ai-workflows', 'toplevel_page_wp-ai-workflows-tasks' ), true ) ) {
+			return;
+		}
+		if ( get_option( self::OPTION_ANALYTICS_NOTICE_DISMISSED, false ) ) {
+			return;
+		}
+		if ( get_option( 'wp_ai_workflows_analytics_opt_in', false ) ) {
+			return;
+		}
+		if ( ! get_option( 'wp_ai_workflows_setup_completed' ) ) {
+			return;
+		}
+		?>
+		<div class="notice notice-info is-dismissible">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<?php wp_nonce_field( self::ANALYTICS_NOTICE_ACTION ); ?>
+				<input type="hidden" name="action" value="wp_ai_workflows_analytics_choice" />
+				<p>
+					<input type="checkbox" name="analytics_opt_in" value="1" id="wpaw-analytics-optin" />
+					<label for="wpaw-analytics-optin">
+						<?php
+						printf(
+							'<strong>%1$s</strong> %2$s %3$s. %4$s',
+							esc_html__( 'Share anonymous usage data.', 'wp-ai-workflows' ),
+							esc_html__( 'Send anonymous usage events such as "created a workflow" so we can see where people get stuck: never your content, prompts, API keys, email address or site name.', 'wp-ai-workflows' ),
+							sprintf(
+								'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
+								esc_url( 'https://wpaiworkflowautomation.com/privacy-policy/' ),
+								esc_html__( 'Privacy policy', 'wp-ai-workflows' )
+							),
+							esc_html__( 'You can change this any time in Settings.', 'wp-ai-workflows' )
+						);
+						?>
+					</label>
+				</p>
+				<p>
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Save choice', 'wp-ai-workflows' ); ?></button>
+					<button type="submit" name="dismiss" value="1" class="button-link"><?php esc_html_e( 'Not now', 'wp-ai-workflows' ); ?></button>
+				</p>
+			</form>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Persist the analytics opt-in choice from the notice form.
+	 *
+	 * @return void
+	 */
+	public function handle_analytics_notice_choice() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You are not allowed to do this.', 'wp-ai-workflows' ), '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( self::ANALYTICS_NOTICE_ACTION );
+
+		update_option( self::OPTION_ANALYTICS_NOTICE_DISMISSED, 1, false );
+
+		$dismissed = isset( $_POST['dismiss'] ) ? sanitize_text_field( wp_unslash( $_POST['dismiss'] ) ) : '';
+		$opted_in  = isset( $_POST['analytics_opt_in'] ) ? sanitize_text_field( wp_unslash( $_POST['analytics_opt_in'] ) ) : '';
+
+		if ( '' === $dismissed && '' !== $opted_in ) {
+			update_option( 'wp_ai_workflows_analytics_opt_in', true );
+		}
+
+		$referer = wp_get_referer();
+		wp_safe_redirect( $referer ? $referer : admin_url( 'admin.php?page=wp-ai-workflows' ) );
+		exit;
+	}
+
+	/**
 	 * One-time "welcome back" notice for a 1.x customer whose license was
 	 * auto-redeemed during the v2.0 migration. Shown once; stays silent on
 	 * any non-grant outcome so an automatic attempt never surfaces an error.
@@ -121,7 +206,7 @@ class WP_AI_Workflows_Admin {
 			$granted = isset( $record['granted'] ) ? (int) $record['granted'] : 0;
 			$message = sprintf(
 				/* translators: %s: goodwill credit gift amount. */
-				'Welcome back — your license expired, so we\'ve added a %s-credit gift to get you started.',
+				'Welcome back. Your license expired, so we\'ve added a %s-credit gift to get you started.',
 				number_format_i18n( $granted > 0 ? $granted : 500 )
 			);
 		}
@@ -343,7 +428,7 @@ class WP_AI_Workflows_Admin {
 	 * app bundle.
 	 *
 	 * Called from both `enqueue_admin_scripts()` and `render_app()`, which each
-	 * call `wp_localize_script()` with the same object name — the later call
+	 * call `wp_localize_script()` with the same object name - the later call
 	 * silently overwrites the earlier one, so routing both through this method
 	 * keeps the base keys consistent between them.
 	 *
@@ -359,10 +444,10 @@ class WP_AI_Workflows_Admin {
 			// something about this site rather than generic filler.
 			'siteName'        => sanitize_text_field( get_bloginfo( 'name' ) ),
 			'installation_id' => get_option( 'wp_ai_workflows_installation_id', '' ),
-			// Whether WooCommerce is active — gates the agent's product-search
+			// Whether WooCommerce is active - gates the agent's product-search
 			// capability in the chat node UI (hidden when Woo is absent).
 			'wooActive'       => class_exists( 'WooCommerce' ),
-			// Whether this site is connected to a platform account — drives the
+			// Whether this site is connected to a platform account - drives the
 			// chat node's "AI source" default (Credits when connected at creation,
 			// else BYOK) and its disconnected-Credits warning.
 			'platformConnected' => class_exists( 'WP_AI_Workflows_Platform_Client' )
@@ -375,6 +460,7 @@ class WP_AI_Workflows_Admin {
 			// so <OnboardingGuide/> can gate the first-run overlay with zero flash
 			// (no mount-time round-trip). Written via REST POST /onboarding.
 			'onboarding_completed' => (bool) get_user_meta( get_current_user_id(), 'wpaw_onboarding_completed', true ),
+			'analytics_opt_in'     => (bool) get_option( 'wp_ai_workflows_analytics_opt_in', false ),
 		);
 
 		return array_merge( $base, $extra );

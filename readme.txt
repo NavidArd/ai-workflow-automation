@@ -2,9 +2,9 @@
 Contributors: massiveshift
 Tags: ai, automation, ai agent, ai chatbot, workflow
 Requires at least: 6.2
-Tested up to: 7.0
+Tested up to: 7.1.1
 Requires PHP: 8.0
-Stable tag: 2.0.7
+Stable tag: 2.0.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,10 +109,10 @@ Our merchant of record, contacted only if you choose to buy a paid plan or a top
 
 **5. Usage analytics (opt-in, off by default)**
 
-Optional and disabled by default. Nothing is sent unless you explicitly switch on "Usage Analytics" in the plugin settings, and you can switch it off again at any time.
+Optional and disabled by default. You are asked once, on the first screen of the getting-started walkthrough, with the box unticked. Nothing is sent unless you tick it there or switch on "Usage Analytics" in the plugin settings, and you can switch it off again at any time in Settings.
 
 * **Service domain:** [api.wpaiworkflowautomation.com](https://api.wpaiworkflowautomation.com)
-* **What is sent, and when:** only after you opt in: an anonymous installation ID, your site URL and a hash of it, the plugin, WordPress, and PHP versions, the AI models selected in settings, and aggregate counts (how many workflows exist, how many are active, and how many executions ran and succeeded in the last 30 days). It is sent when the plugin is activated or deactivated and roughly once a day while enabled. No personal data, API keys, prompts, workflow content, or execution content is sent.
+* **What is sent, and when:** only after you opt in: a random installation ID that is not derived from your site address, the plugin version, and a short usage event such as "installed", "finished setup", "connected an AI provider", "created a workflow" or "a workflow ran successfully". Each of those is sent once per installation. Once a day the plugin also sends counts only: how many workflows exist, how many executions ran in the last 7 and 30 days, and how many nodes of each type are in use. Your site address, site name, email address, API keys, prompts, workflow content and execution content are never sent, and there is no field in the payload that can carry them.
 * Terms and conditions: [wpaiworkflowautomation.com/terms-and-conditions](https://wpaiworkflowautomation.com/terms-and-conditions/)
 * Privacy policy: [wpaiworkflowautomation.com/privacy-policy](https://wpaiworkflowautomation.com/privacy-policy/)
 
@@ -149,7 +149,7 @@ WordPress 6.2 or higher and PHP 8.0 or higher. The plugin is fully functional on
 
 = Can I use it on multiple sites (agencies)? =
 
-Yes. The free local mode works on any number of sites. Cloud accounts include agency support for managing many client sites (up to 50) from one account.
+Yes. The free local mode works on any number of sites, with no account and no limit. If you connect a cloud account, the Free and Pro plans cover one production site at a time and you can move your account between sites whenever you like, at no cost. Development and staging sites never count. The Business plan connects up to 50 client sites from one account, with per-site usage and budgets.
 
 = Can I cancel anytime? =
 
@@ -169,6 +169,21 @@ No. The visual drag-and-drop builder lets you create complex, AI-powered workflo
 6. Human in the loop: review, approve, or edit what the AI drafted before it is sent or published.
 
 == Changelog ==
+
+= 2.0.8 =
+* New: the getting-started walkthrough now asks once, on its first screen, whether you want to share anonymous usage data. The box is unticked, it says exactly what is collected, and you can change it any time in Settings. Nothing is sent unless you say yes.
+* Fixed: a Post node that creates a WooCommerce product now writes the price, sale price, SKU, stock status and stock quantity, and saves any other field you map as a custom field. Before, the product was created with no price, no SKU and no custom fields. Cloud runs write the same fields.
+* Fixed: replaced the long dashes in on-screen text with plain punctuation, so nothing shows as a stray character.
+* Fixed: a Cloud run now carries every setting you chose on a node. The Media Generator node lost the model and the prompt, Connect an App lost the app and the action, Send Email always sent plain text and dropped cc and bcc, and the AI Model node lost its structured output schema.
+* Fixed: a post created by a Cloud run now carries the excerpt as well as the title, content, status and post type.
+* Fixed: line breaks in an AI Model prompt are kept in Local mode, instead of being collapsed into one line.
+* New: a Loop node that repeats over a list now runs in Cloud.
+* New: anything Cloud cannot run is refused before the run starts, with the reason, instead of failing part way through. That covers the Document Parser, Firecrawl set to map, search or agent, a delayed Send Email, a Knowledge Base on the AI Model node, a task assigned to a WordPress user or role, and a Post node that sets the author, categories, a featured image, product images, ACF fields or a future date. Those workflows run Locally as before.
+* New: if your plan has no site slot left, connecting now offers to move your account to this site, or to upgrade, instead of only reporting an error. Development sites never count toward the limit.
+* Fixed: the setup wizard keeps an API key you paste and it verifies, whichever way you close the wizard afterwards. Before, the key could be dropped and the first run failed saying no key was set.
+* Fixed: the system report no longer writes PHP notices to the debug log when permalinks are set to plain, and neither does the Chats page on a site that has no chats yet.
+* Fixed: line breaks in an AI result now show as real line breaks in the execution details and in the live execution panel, instead of as a stray HTML tag.
+* Fixed: a spelling mistake in the confirmation message shown after you approve or edit a human task.
 
 = 2.0.7 =
 * New: setup now opens on a simple choice: use the free cloud credits that come with a connected account, or bring your own API key. The key step can be skipped and set up later.
@@ -286,6 +301,9 @@ No. The visual drag-and-drop builder lets you create complex, AI-powered workflo
 * Previous public release on WordPress.org.
 
 == Upgrade Notice ==
+
+= 2.0.8 =
+Cloud runs now carry every node setting, and anything Cloud cannot run is refused before the run with the reason. Multi-line prompts keep their line breaks. Recommended for everyone.
 
 = 2.0.7 =
 A guided setup with free cloud credits and verified API keys, plus fixes to the setup wizard, the workflow list, and the AI Model node. Recommended for everyone.

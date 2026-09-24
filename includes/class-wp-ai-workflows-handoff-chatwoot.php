@@ -1,6 +1,6 @@
 <?php
 /**
- * Chatwoot Handoff Provider — Agent-Bot style handoff to a Chatwoot inbox.
+ * Chatwoot Handoff Provider - Agent-Bot style handoff to a Chatwoot inbox.
  *
  * Outbound: creates a contact + conversation, posts the transcript as a
  * private note, and opens the conversation for a human (optionally assigning
@@ -200,7 +200,7 @@ class WP_AI_Workflows_Handoff_Chatwoot implements WP_AI_Workflows_Handoff_Provid
 		}
 
 		// Only relay a human agent's message. Human agents have sender type
-		// 'user'; agent bots have 'agent_bot' — never echo our own bot posts.
+		// 'user'; agent bots have 'agent_bot' - never echo our own bot posts.
 		$sender      = isset( $payload['sender'] ) && is_array( $payload['sender'] ) ? $payload['sender'] : array();
 		$sender_type = isset( $sender['type'] ) ? strtolower( (string) $sender['type'] ) : '';
 		if ( '' !== $sender_type && 'user' !== $sender_type && 'agent' !== $sender_type ) {
@@ -291,7 +291,7 @@ class WP_AI_Workflows_Handoff_Chatwoot implements WP_AI_Workflows_Handoff_Provid
 				}
 			}
 			if ( $cust ) {
-				$lines[] = 'Customer — ' . implode( ', ', $cust );
+				$lines[] = 'Customer: ' . implode( ', ', $cust );
 			}
 		}
 		if ( ! empty( $metadata['kb_refs'] ) && is_array( $metadata['kb_refs'] ) ) {

@@ -944,7 +944,7 @@ class WP_AI_Workflows_REST_API {
 			)
 		);
 
-		// Clarify-first PHASE 1: cheap analysis that returns 0–4 clarifying
+		// Clarify-first PHASE 1: cheap analysis that returns 0 to 4 clarifying
 		// questions (option chips) for the UI to ask before the expensive build.
 		register_rest_route(
 			'wp-ai-workflows/v1',
@@ -1551,7 +1551,7 @@ class WP_AI_Workflows_REST_API {
 			)
 		);
 
-		// Operator reply — relays to the visitor and takes human control.
+		// Operator reply - relays to the visitor and takes human control.
 		register_rest_route(
 			'wp-ai-workflows/v1',
 			'/handoff-reply',
@@ -1610,7 +1610,7 @@ class WP_AI_Workflows_REST_API {
 			)
 		);
 
-		// Operator upload — a human agent shares a file back to the visitor.
+		// Operator upload - a human agent shares a file back to the visitor.
 		register_rest_route(
 			'wp-ai-workflows/v1',
 			'/handoff-upload',
@@ -2432,7 +2432,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/login — proxy platform login, return org list (never the token).
+	 * POST /platform/login - proxy platform login, return org list (never the token).
 	 */
 	public function platform_login( $request ) {
 		$params   = $request->get_json_params();
@@ -2456,7 +2456,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/signup — create a platform account (headless) and return orgs.
+	 * POST /platform/signup - create a platform account (headless) and return orgs.
 	 */
 	public function platform_signup( $request ) {
 		$params    = $request->get_json_params();
@@ -2482,7 +2482,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/google-complete — adopt a JWT handed back by the "Continue with
+	 * POST /platform/google-complete - adopt a JWT handed back by the "Continue with
 	 * Google" OAuth popup and return the org list (never the token).
 	 */
 	public function platform_google_complete( $request ) {
@@ -2506,7 +2506,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/register-site — register site with the chosen org, store key.
+	 * POST /platform/register-site - register site with the chosen org, store key.
 	 */
 	public function platform_register_site( $request ) {
 		$params   = $request->get_json_params();
@@ -2514,11 +2514,14 @@ class WP_AI_Workflows_REST_API {
 		$org_name = isset( $params['orgName'] ) ? sanitize_text_field( $params['orgName'] ) : '';
 		$is_poll  = ! empty( $params['poll'] );
 
+		// Moving the account to this site frees the plan slot the named site holds.
+		$replace_site_id = isset( $params['replaceSiteId'] ) ? sanitize_text_field( $params['replaceSiteId'] ) : '';
+
 		if ( '' === $org_id ) {
 			return new WP_Error( 'invalid_input', 'An organization must be selected.', array( 'status' => 400 ) );
 		}
 
-		$result = WP_AI_Workflows_Platform_Client::register_site( $org_id, $org_name );
+		$result = WP_AI_Workflows_Platform_Client::register_site( $org_id, $org_name, $replace_site_id );
 		if ( is_wp_error( $result ) ) {
 			// An unattended readiness re-attempt answers 200 so a pending email
 			// verification does not fill the browser console with failed requests.
@@ -2568,7 +2571,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/org-sites — list the org's sites + entitlement + per-site usage
+	 * GET /platform/org-sites - list the org's sites + entitlement + per-site usage
 	 * and caps (owner-only; enforced by the platform). Non-owner → 403 NOT_OWNER,
 	 * non-Business is still 200 with entitlement.isBusiness=false so the UI upsells.
 	 */
@@ -2581,7 +2584,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/org-sites/update — rename and/or set a site's display URL.
+	 * POST /platform/org-sites/update - rename and/or set a site's display URL.
 	 * Body: { siteId, name?, websiteUrl? } (websiteUrl '' clears it). Owner-only.
 	 */
 	public function platform_org_site_update( $request ) {
@@ -2607,7 +2610,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/org-sites/cap — set/clear a per-site credit cap (Business only).
+	 * POST /platform/org-sites/cap - set/clear a per-site credit cap (Business only).
 	 * Body: { siteId, cap: number|null, period?: 'monthly'|'total' }. Owner-only.
 	 */
 	public function platform_org_site_cap( $request ) {
@@ -2630,7 +2633,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/org-sites/remove — remove / revoke a site. Body: { siteId }.
+	 * POST /platform/org-sites/remove - remove / revoke a site. Body: { siteId }.
 	 * Owner-only. Destructive: the UI confirms before calling this.
 	 */
 	public function platform_org_site_remove( $request ) {
@@ -2653,9 +2656,9 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/org-sites/provision — pre-provision a new site and issue its key
+	 * POST /platform/org-sites/provision - pre-provision a new site and issue its key
 	 * ONCE. Body: { siteUrl, siteName? }. Owner-only, Business site-limit enforced.
-	 * The returned apiKey is plaintext shown once — the UI surfaces it and discards it.
+	 * The returned apiKey is plaintext shown once - the UI surfaces it and discards it.
 	 */
 	public function platform_org_site_provision( $request ) {
 		$params    = $request->get_json_params();
@@ -2680,7 +2683,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/status — connection metadata (never the key).
+	 * GET /platform/status - connection metadata (never the key).
 	 */
 	public function platform_status() {
 		// Cloud-callback pre-flight verdict: whether the cloud could reach this
@@ -2710,7 +2713,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/disconnect — revoke + purge local state.
+	 * POST /platform/disconnect - revoke + purge local state.
 	 */
 	public function platform_disconnect() {
 		$fresh = WP_AI_Workflows_Platform_Client::require_recent_session();
@@ -2726,7 +2729,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/sign-out — end this WP user's management session. The site stays
+	 * POST /platform/sign-out - end this WP user's management session. The site stays
 	 * connected; workflows keep running on the site key.
 	 */
 	public function platform_sign_out() {
@@ -2735,7 +2738,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/sign-out-everywhere — retire every session issued for the
+	 * POST /platform/sign-out-everywhere - retire every session issued for the
 	 * platform account, then clear the local one.
 	 */
 	public function platform_sign_out_everywhere() {
@@ -2747,7 +2750,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/rotate-key — rotate; returns new keyPrefix/last4 only.
+	 * POST /platform/rotate-key - rotate; returns new keyPrefix/last4 only.
 	 */
 	public function platform_rotate_key() {
 		$fresh = WP_AI_Workflows_Platform_Client::require_recent_session();
@@ -2768,7 +2771,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/credits — cached credits status for the meter. Never errors the
+	 * GET /platform/credits - cached credits status for the meter. Never errors the
 	 * page: disconnected -> {state:'disconnected'} (zero platform contact),
 	 * network/5xx -> {state:'unavailable'} (R2.6). All numbers cast, strings escaped.
 	 */
@@ -2800,7 +2803,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /onboarding — return whether the current user has completed (or
+	 * GET /onboarding - return whether the current user has completed (or
 	 * skipped) the new-user welcome walkthrough. Per-user (user meta).
 	 *
 	 * @return WP_REST_Response
@@ -2816,7 +2819,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /onboarding — persist the current user's welcome-walkthrough state.
+	 * POST /onboarding - persist the current user's welcome-walkthrough state.
 	 * Body: { completed: bool }.
 	 *
 	 * @param WP_REST_Request $request
@@ -2900,7 +2903,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /onboarding-milestone — browser-facing proxy that awards a one-time
+	 * POST /onboarding-milestone - browser-facing proxy that awards a one-time
 	 * onboarding-milestone credit bonus. When the site is not connected, returns
 	 * a friendly { state:'disconnected' } 200 instead of erroring.
 	 *
@@ -2921,7 +2924,7 @@ class WP_AI_Workflows_REST_API {
 
 		$result = WP_AI_Workflows_Platform_Client::grant_onboarding_milestone( $milestone );
 		if ( is_wp_error( $result ) ) {
-			// Background-ish grant — never surface a hard error into the onboarding UI.
+			// Background-ish grant - never surface a hard error into the onboarding UI.
 			return rest_ensure_response( array( 'success' => true, 'state' => 'unavailable' ) );
 		}
 
@@ -2938,7 +2941,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/credits-history — browser-facing proxy for the Usage Center's
+	 * GET /platform/credits-history - browser-facing proxy for the Usage Center's
 	 * purchase / top-up / consumption ledger. Never errors the page: disconnected →
 	 * { state:'disconnected' }; network/5xx → { state:'unavailable' }.
 	 *
@@ -2995,7 +2998,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/usage-daily — browser-facing proxy for the Usage Center's daily
+	 * GET /platform/usage-daily - browser-facing proxy for the Usage Center's daily
 	 * consumption chart. Disconnected → { state:'disconnected' };
 	 * network/5xx → { state:'unavailable' }.
 	 *
@@ -3039,7 +3042,7 @@ class WP_AI_Workflows_REST_API {
 		);
 	}
 
-	/* Apps / Connect an App (Pipedream) — browser-facing proxies onto the
+	/* Apps / Connect an App (Pipedream) - browser-facing proxies onto the
 	 * platform's /api/v1/mcp/* surface. */
 
 	/**
@@ -3066,7 +3069,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/apps/search — search the Pipedream app registry.
+	 * GET /platform/apps/search - search the Pipedream app registry.
 	 */
 	public function platform_apps_search( $request ) {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3079,7 +3082,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/apps/tools — list an app's actions + dynamic input schemas.
+	 * GET /platform/apps/tools - list an app's actions + dynamic input schemas.
 	 */
 	public function platform_apps_tools( $request ) {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3090,7 +3093,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/connect — mint a Pipedream Connect token + hosted URL.
+	 * POST /platform/apps/connect - mint a Pipedream Connect token + hosted URL.
 	 */
 	public function platform_apps_connect( $request ) {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3102,7 +3105,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/connect-credentials — connect an API-key/BASIC app with the
+	 * POST /platform/apps/connect-credentials - connect an API-key/BASIC app with the
 	 * user's own credentials. Body: { app, fields:{ name: value, ... } }. Field values
 	 * are secrets: forwarded to the platform (its vault), never stored or logged here.
 	 */
@@ -3119,7 +3122,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/apps/connections — list the org's connected accounts.
+	 * GET /platform/apps/connections - list the org's connected accounts.
 	 */
 	public function platform_apps_connections() {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3129,7 +3132,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/disconnect — remove a connected account (switch accounts).
+	 * POST /platform/apps/disconnect - remove a connected account (switch accounts).
 	 * Body: { accountId }.
 	 */
 	public function platform_apps_disconnect( $request ) {
@@ -3142,7 +3145,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/connections/sync — sync connected accounts from Pipedream.
+	 * POST /platform/apps/connections/sync - sync connected accounts from Pipedream.
 	 */
 	public function platform_apps_connections_sync() {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3152,7 +3155,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/configure — load dynamic options for one action prop.
+	 * POST /platform/apps/configure - load dynamic options for one action prop.
 	 * Body: { app, tool, prop, configuredProps, query }.
 	 */
 	public function platform_apps_configure( $request ) {
@@ -3171,7 +3174,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/reload — reshape an action's whole prop set (reloadProps).
+	 * POST /platform/apps/reload - reshape an action's whole prop set (reloadProps).
 	 * Body: { app, tool, configuredProps }.
 	 */
 	public function platform_apps_reload( $request ) {
@@ -3188,7 +3191,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/apps/event-sources — list an app's event sources (triggers).
+	 * GET /platform/apps/event-sources - list an app's event sources (triggers).
 	 * Query: { app }.
 	 */
 	public function platform_apps_event_sources( $request ) {
@@ -3200,7 +3203,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/deploy-trigger — deploy a Pipedream trigger bound to a
+	 * POST /platform/apps/deploy-trigger - deploy a Pipedream trigger bound to a
 	 * workflow. Body: { app, eventSourceId, configuredProps, workflowId, authProvisionId }.
 	 */
 	public function platform_apps_deploy_trigger( $request ) {
@@ -3219,7 +3222,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/apps/list-triggers — list the org's deployed triggers.
+	 * GET /platform/apps/list-triggers - list the org's deployed triggers.
 	 */
 	public function platform_apps_list_triggers() {
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
@@ -3229,7 +3232,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/apps/delete-trigger — remove a deployed trigger.
+	 * POST /platform/apps/delete-trigger - remove a deployed trigger.
 	 * Body: { triggerId }.
 	 */
 	public function platform_apps_delete_trigger( $request ) {
@@ -3242,7 +3245,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /chat-widget-status — local check used by the onboarding banner to
+	 * GET /chat-widget-status - local check used by the onboarding banner to
 	 * decide whether the "Embed the chat widget" milestone is complete.
 	 *
 	 * @return WP_REST_Response
@@ -3296,7 +3299,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/pdf-templates — proxy so the Generate PDF node's template
+	 * GET /platform/pdf-templates - proxy so the Generate PDF node's template
 	 * picker can list the built-in templates and their expected data fields.
 	 */
 	public function platform_pdf_templates( $request ) {
@@ -3360,7 +3363,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/pdf-preview — returns a free PNG preview of a PDF template
+	 * POST /platform/pdf-preview - returns a free PNG preview of a PDF template
 	 * or custom HTML, so the Generate PDF node can show users the result before
 	 * they spend a credit on a real render. Not credit-metered.
 	 *
@@ -3402,7 +3405,7 @@ class WP_AI_Workflows_REST_API {
 			$body['data'] = self::sanitize_pdf_preview_data( $params['data'], 0 );
 		}
 
-		// Optional preview render options (landscape / width) — bounded.
+		// Optional preview render options (landscape / width) - bounded.
 		if ( isset( $params['options'] ) && is_array( $params['options'] ) ) {
 			$options = array();
 			if ( isset( $params['options']['landscape'] ) ) {
@@ -3431,7 +3434,7 @@ class WP_AI_Workflows_REST_API {
 			);
 		}
 
-		// Only surface a value that is actually a PNG data URL — fail closed otherwise.
+		// Only surface a value that is actually a PNG data URL - fail closed otherwise.
 		$data_url = isset( $result['dataUrl'] ) ? (string) $result['dataUrl'] : '';
 		$image    = ( 0 === strpos( $data_url, 'data:image/' ) ) ? $data_url : '';
 
@@ -3476,7 +3479,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/execution/{id} — poll proxy for a cloud run. Given a local
+	 * GET /platform/execution/{id} - poll proxy for a cloud run. Given a local
 	 * execution row id, polls the platform, settles the row, and returns a
 	 * sanitized status the builder can drive on.
 	 */
@@ -3505,10 +3508,10 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/execution/{id}/steps — ordered per-node steps (name + input +
+	 * GET /platform/execution/{id}/steps - ordered per-node steps (name + input +
 	 * output) for a cloud execution, so the details modal can show what happened
 	 * at each node. For a local/BYOK run (no platform id) returns cloud:false
-	 * with an empty list — the modal renders local per-node data instead.
+	 * with an empty list - the modal renders local per-node data instead.
 	 */
 	public function platform_execution_steps( $request ) {
 		global $wpdb;
@@ -3526,7 +3529,7 @@ class WP_AI_Workflows_REST_API {
 		$meta = $row->cost_details ? json_decode( $row->cost_details, true ) : array();
 		$pid  = is_array( $meta ) && isset( $meta['platform_execution_id'] ) ? $meta['platform_execution_id'] : null;
 
-		// Not a cloud run — the modal falls back to WP-stored per-node data.
+		// Not a cloud run - the modal falls back to WP-stored per-node data.
 		if ( null === $pid ) {
 			return rest_ensure_response(
 				array(
@@ -3582,7 +3585,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/checkout — create a checkout transaction for the selected
+	 * POST /platform/checkout - create a checkout transaction for the selected
 	 * pack/plan and return our hosted checkout page URL.
 	 */
 	public function platform_checkout( $request ) {
@@ -3607,7 +3610,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/subscription — current plan/status summary for the Billing UI.
+	 * GET /platform/subscription - current plan/status summary for the Billing UI.
 	 * Best-effort: a platform failure returns {state:'unavailable'} rather than
 	 * erroring the page, so the credit packs still render.
 	 */
@@ -3622,6 +3625,9 @@ class WP_AI_Workflows_REST_API {
 			$state = 'platform_auth_jwt' === $result->get_error_code() ? 'needs_signin' : 'unavailable';
 			return rest_ensure_response( array( 'success' => true, 'state' => $state ) );
 		}
+
+		WP_AI_Workflows_Analytics_Collector::note_plan( $result['plan'], $result['status'] );
+
 		return rest_ensure_response(
 			array(
 				'success'  => true,
@@ -3635,7 +3641,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/portal — mint a one-time Paddle customer-portal session URL
+	 * POST /platform/portal - mint a one-time Paddle customer-portal session URL
 	 * (manage/cancel subscription, payment methods). The browser opens it in a new
 	 * tab. JWT-authed; the backend resolves the customer from the account.
 	 */
@@ -3653,7 +3659,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/redeem-license — manual legacy v1 (SLM) key redemption
+	 * POST /platform/redeem-license - manual legacy v1 (SLM) key redemption
 	 * fallback for users whose stored option is missing. Returns the final
 	 * normalised outcome (monthly|goodwill|already|invalid|not_redeemable|
 	 * pending|error). Rate limited to one submit per 30s per user.
@@ -3674,7 +3680,7 @@ class WP_AI_Workflows_REST_API {
 
 		$result = WP_AI_Workflows_Platform_Client::redeem_license( $license );
 		if ( is_wp_error( $result ) ) {
-			// Transient/auth/unexpected — surface as an HTTP error; the UI shows a
+			// Transient/auth/unexpected - surface as an HTTP error; the UI shows a
 			// friendly "try again" message.
 			return $result;
 		}
@@ -3692,7 +3698,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/legacy-redeem — the automatic legacy-redemption status the
+	 * GET /platform/legacy-redeem - the automatic legacy-redemption status the
 	 * account UI polls after connecting. If the attempt is still queued, runs
 	 * the worker inline for an immediate reveal instead of waiting on cron.
 	 */
@@ -3722,7 +3728,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * GET /platform/preferences — return the keyless-routing global preference so the
+	 * GET /platform/preferences - return the keyless-routing global preference so the
 	 * Account tab can render its toggle (R5.3).
 	 */
 	public function platform_get_preferences() {
@@ -3736,7 +3742,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /platform/preferences — persist the global "prefer credits when connected"
+	 * POST /platform/preferences - persist the global "prefer credits when connected"
 	 * toggle inside wp_ai_workflows_settings without clobbering other keys (R5.3).
 	 */
 	public function platform_set_preferences( $request ) {
@@ -4106,7 +4112,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * POST /validate-provider-key — ask the provider whether a key authenticates.
+	 * POST /validate-provider-key - ask the provider whether a key authenticates.
 	 * Body: { provider: 'openrouter'|'openai', key }. The key is never stored,
 	 * echoed or logged here.
 	 *
@@ -4235,7 +4241,7 @@ class WP_AI_Workflows_REST_API {
 			WP_AI_Workflows_Utilities::debug_log( 'Task found', 'info', array( 'task' => $task ) );
 
 		// Agent tool-approval tasks resume a paused chat conversation, not a
-		// workflow execution — route them through the shared approval resolver.
+		// workflow execution - route them through the shared approval resolver.
 		if ( class_exists( 'WP_AI_Workflows_Agent_Approvals' ) && WP_AI_Workflows_Agent_Approvals::is_agent_task( $task ) ) {
 			if ( ! in_array( $action, array( 'approve', 'reject', 'revert' ), true ) ) {
 				return new WP_Error( 'invalid_action', 'Unsupported action for an approval task', array( 'status' => 400 ) );
@@ -5474,7 +5480,7 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
-	 * Clarify-first PHASE 1 endpoint: return 0–4 clarifying questions for the
+	 * Clarify-first PHASE 1 endpoint: return 0 to 4 clarifying questions for the
 	 * user's request. Deliberately NON-FATAL: if the analysis fails (transport,
 	 * bad model output, missing key) we still return 200 with an empty question
 	 * list plus a warning, so the UI can fall through to the model pick + build.
@@ -5592,7 +5598,7 @@ class WP_AI_Workflows_REST_API {
 	/**
 	 * Extract the external conversation reference from an inbound helpdesk webhook
 	 * body, so the local session can be located before authentication. This is a
-	 * lookup key only — it never grants trust; verify_webhook() authenticates.
+	 * lookup key only - it never grants trust; verify_webhook() authenticates.
 	 *
 	 * @param string $provider_slug One of chatwoot|zendesk|intercom.
 	 * @param array  $body          Decoded webhook body.
@@ -5680,7 +5686,7 @@ class WP_AI_Workflows_REST_API {
 		$record  = $manager->store()->get_record( $session_id );
 		$config  = $record ? $manager->config_for_workflow( $record['workflow_id'] ) : null;
 		if ( ! $config ) {
-			// No live config (or already bot) — just force the mode back to bot.
+			// No live config (or already bot) - just force the mode back to bot.
 			$manager->store()->end( $session_id );
 			return new WP_REST_Response( array( 'mode' => 'bot' ), 200 );
 		}
@@ -5779,7 +5785,7 @@ class WP_AI_Workflows_REST_API {
 			);
 		}
 
-		// Pending tool approvals from agent conversations — the same underlying
+		// Pending tool approvals from agent conversations - the same underlying
 		// human-tasks rows the Tasks page reads (a VIEW, not a forked state). The
 		// inbox surfaces them alongside handoffs with inline approve/reject.
 		$approvals = class_exists( 'WP_AI_Workflows_Agent_Approvals' )
@@ -5929,7 +5935,7 @@ class WP_AI_Workflows_REST_API {
 
 	/**
 	 * Operator reply from the inbox. Relays the message to the visitor, takes
-	 * human control, and — for an external provider — best-effort echoes into
+	 * human control, and - for an external provider - best-effort echoes into
 	 * the provider thread so its dashboard stays in sync.
 	 *
 	 * @param WP_REST_Request $request Request.
@@ -6048,7 +6054,7 @@ class WP_AI_Workflows_REST_API {
 		}
 
 		// Bot turn: make the document usable by the AI on its next reply.
-		// Human turn: no AI awareness needed — the operator reads it directly.
+		// Human turn: no AI awareness needed - the operator reads it directly.
 		if ( 'human' !== $mode && 'pending_human' !== $mode ) {
 			WP_AI_Workflows_Chat_Uploads::prepare_ai_awareness( $stored, $session_id );
 		}
@@ -7244,12 +7250,15 @@ class WP_AI_Workflows_REST_API {
 			)
 		);
 
+		$total_messages   = isset( $message_stats->total_messages ) ? (int) $message_stats->total_messages : 0;
+		$average_per_chat = isset( $message_stats->avg_messages_per_chat ) ? (float) $message_stats->avg_messages_per_chat : 0.0;
+
 		return new WP_REST_Response(
 			array(
 				'totalSessions'          => (int) $total_sessions,
 				'activeToday'            => (int) $active_today,
-				'totalMessages'          => (int) $message_stats->total_messages,
-				'averageMessagesPerChat' => round( $message_stats->avg_messages_per_chat, 1 ),
+				'totalMessages'          => $total_messages,
+				'averageMessagesPerChat' => round( $average_per_chat, 1 ),
 			),
 			200
 		);
@@ -8468,6 +8477,9 @@ class WP_AI_Workflows_REST_API {
 			'status_code'              => null,
 			'test_endpoint_accessible' => false,
 			'plugin_conflicts'         => array(),
+			'htaccess_exists'          => false,
+			'htaccess_writable'        => false,
+			'behind_proxy'             => false,
 		);
 
 		if ( ! $rest_enabled ) {
@@ -9384,7 +9396,7 @@ class WP_AI_Workflows_REST_API {
 
 	/**
 	 * Get whitelabel settings for editing (the settings-page read path). Not
-	 * how saved branding renders — that is the ungated, PHP-injected
+	 * how saved branding renders - that is the ungated, PHP-injected
 	 * window.wpAiWorkflowsWhitelabel global.
 	 */
 	public function get_whitelabel_settings() {

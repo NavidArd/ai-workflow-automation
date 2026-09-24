@@ -33,7 +33,7 @@
     "produces": { "kind": "terminal", "cardinality": "single", "reference": "[Input from {id}]", "note": "Workflow endpoint. `display` just shows [Input from upstream]." },
     "consumes": {
       "multiField": { "field": "fieldMappings", "requiredKeys": [], "optionalKeys": [] },
-      "note": "For outputType `save` (fieldMappings) or `googleSheets` (columnMappings), each column maps to its OWN upstream field — same shape rules as the Post node. For `display`/`webhook` a single [Input from upstream] blob is fine."
+      "note": "For outputType `save` (fieldMappings) or `googleSheets` (columnMappings), each column maps to its OWN upstream field: same shape rules as the Post node. For `display`/`webhook` a single [Input from upstream] blob is fine."
     }
   }
 }

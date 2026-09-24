@@ -2,7 +2,7 @@
   "type": "research",
   "label": "AI Research",
   "category": "AI Actions",
-  "description": "Runs online research on a query using Perplexity Sonar models and returns a sourced answer. A high-cost node — it performs live web research.",
+  "description": "Runs online research on a query using Perplexity Sonar models and returns a sourced answer. A high-cost node: it performs live web research.",
   "capabilities": ["online research", "web-grounded answers", "Perplexity Sonar"],
   "modes": ["local", "cloud"],
   "credits": 40,
@@ -12,7 +12,6 @@
     { "name": "model", "type": "enum", "required": false, "default": "sonar",
       "options": ["sonar", "sonar-pro", "sonar-reasoning", "sonar-reasoning-pro", "sonar-deep-research"],
       "description": "Perplexity research model." },
-    { "name": "maxTokens", "type": "number", "required": false, "default": 2048, "description": "Response length limit (1-4096)." },
     { "name": "temperature", "type": "number", "required": false, "default": 1.0, "description": "Sampling temperature (0.0-2.0)." }
   ],
   "inputs": ["main"],

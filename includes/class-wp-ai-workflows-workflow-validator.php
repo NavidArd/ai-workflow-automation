@@ -90,7 +90,7 @@ class WP_AI_Workflows_Workflow_Validator {
 					null,
 					$type
 				);
-				continue; // No contract for an unknown type — further checks would be noise.
+				continue; // No contract for an unknown type - further checks would be noise.
 			}
 
 			$data     = isset( $node['data'] ) && is_array( $node['data'] ) ? $node['data'] : array();
@@ -198,7 +198,7 @@ class WP_AI_Workflows_Workflow_Validator {
 				$ref_contract = self::catalog_contract( $ref_type );
 
 				if ( 'input' === $tag['kind'] ) {
-					// [Input from X] — whole-output reference. Valid for any real node.
+					// [Input from X] - whole-output reference. Valid for any real node.
 					// (Connectivity is repaired separately by the generator.)
 					continue;
 				}
@@ -233,7 +233,7 @@ class WP_AI_Workflows_Workflow_Validator {
 				$issues[] = self::issue(
 					'invalid_action_reference',
 					'error',
-					"Node \"{$id}\" uses an action reference {$tag['raw']}, but \"{$ref_id}\" is a \"{$ref_type}\" node — only chat nodes expose action fields.",
+					"Node \"{$id}\" uses an action reference {$tag['raw']}, but \"{$ref_id}\" is a \"{$ref_type}\" node: only chat nodes expose action fields.",
 					$id,
 					$field,
 					$ref_id
@@ -269,7 +269,7 @@ class WP_AI_Workflows_Workflow_Validator {
 		$root = self::field_root( $field ); // first segment before any dot.
 
 		// Dynamic-field producers (form triggers): field names are known only at
-		// runtime — accept.
+		// runtime - accept.
 		if ( ! empty( $produces['dynamicFields'] ) ) {
 			return;
 		}
@@ -307,7 +307,7 @@ class WP_AI_Workflows_Workflow_Validator {
 			}
 			// AI Prompt node with native structured output enabled: it produces
 			// one named field per outputSchema[].name. Only treat it as a named
-			// producer when the toggle is on — otherwise fall through to the
+			// producer when the toggle is on - otherwise fall through to the
 			// single-blob contract check (the JSON-in-prompt escape hatch still
 			// applies for a plain AI node).
 			if ( 'aiModel' === $ref_type ) {
@@ -345,7 +345,7 @@ class WP_AI_Workflows_Workflow_Validator {
 			$issues[] = self::issue(
 				'named_field_on_routing_node',
 				'warning',
-				"Node \"{$id}\" reads field \"{$field}\" from routing node \"{$ref_id}\" ({$ref_type}); routing nodes forward the whole content — use [Input from {$ref_id}] instead.",
+				"Node \"{$id}\" reads field \"{$field}\" from routing node \"{$ref_id}\" ({$ref_type}); routing nodes forward the whole content. Use [Input from {$ref_id}] instead.",
 				$id,
 				$field,
 				$ref_id
@@ -353,7 +353,7 @@ class WP_AI_Workflows_Workflow_Validator {
 			return;
 		}
 
-		// THE CORE CONTRACT CHECK — a fabricated field on a single text/media blob.
+		// THE CORE CONTRACT CHECK - a fabricated field on a single text/media blob.
 		// The producing node emits ONE output; it has no named "{$field}" field.
 		if ( empty( $produces['namedFields'] ) ) {
 			$json_extractable = ! empty( $produces['jsonExtractable'] );
@@ -361,17 +361,17 @@ class WP_AI_Workflows_Workflow_Validator {
 
 			if ( ! $emits_json ) {
 				if ( 'aiModel' === $ref_type ) {
-					$fix = "Fix by ONE of: (a) PREFERRED — enable Structured output on \"{$ref_id}\" and define an output field named \"{$root}\" (structuredOutput=true with outputSchema:[{name:\"{$root}\", …}]), then keep {$tag['raw']}; (b) instruct \"{$ref_id}\" to return strict JSON containing a \"{$root}\" key; (c) insert an AI Extract Information node after \"{$ref_id}\" with an extraction field named \"{$root}\"; or (d) reference the whole output with [Input from {$ref_id}].";
+					$fix = "Fix by ONE of: (a) PREFERRED: enable Structured output on \"{$ref_id}\" and define an output field named \"{$root}\" (structuredOutput=true with outputSchema:[{name:\"{$root}\", …}]), then keep {$tag['raw']}; (b) instruct \"{$ref_id}\" to return strict JSON containing a \"{$root}\" key; (c) insert an AI Extract Information node after \"{$ref_id}\" with an extraction field named \"{$root}\"; or (d) reference the whole output with [Input from {$ref_id}].";
 				} else {
 					$fix = $json_extractable
 						? "Fix by ONE of: (a) instruct \"{$ref_id}\" to return strict JSON containing a \"{$root}\" key, then keep {$tag['raw']}; (b) insert an AI Extract Information node after \"{$ref_id}\" with an extraction field named \"{$root}\" and reference [[{$root}] from <that node>]; or (c) reference the whole output with [Input from {$ref_id}]."
-						: "Fix by referencing the whole output with [Input from {$ref_id}] — this node type does not produce named fields.";
+						: "Fix by referencing the whole output with [Input from {$ref_id}]. This node type does not produce named fields.";
 				}
 
 				$issues[] = self::issue(
 					'contract_field_from_text_blob',
 					'error',
-					"Node \"{$id}\" references field \"{$field}\" from \"{$ref_id}\" ({$ref_type}), but that node produces a SINGLE unnamed output with no \"{$root}\" field — this tag will not resolve. " . $fix,
+					"Node \"{$id}\" references field \"{$field}\" from \"{$ref_id}\" ({$ref_type}), but that node produces a SINGLE unnamed output with no \"{$root}\" field. This tag will not resolve. " . $fix,
 					$id,
 					$field,
 					$ref_id
@@ -388,7 +388,7 @@ class WP_AI_Workflows_Workflow_Validator {
 	 * Multi-field consumers (Post, save Output, Generate PDF) must feed each
 	 * required field from its OWN real output. The classic generator failure is
 	 * wiring one plain AI text blob into several distinct fields (title + content)
-	 * and inventing per-field tags — flag that so the repair loop inserts a bridge.
+	 * and inventing per-field tags - flag that so the repair loop inserts a bridge.
 	 *
 	 * @param string     $id       Consumer node id.
 	 * @param string     $type     Consumer node type.

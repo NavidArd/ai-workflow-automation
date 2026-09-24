@@ -1,6 +1,6 @@
 <?php
 /**
- * Handoff Store — the conversation-mode state machine + inbound relay queue.
+ * Handoff Store - the conversation-mode state machine + inbound relay queue.
  *
  * Tracks a chat session's mode (bot | pending_human | human) in a dedicated,
  * self-healing table (existing chat/session tables are never altered). Inbound
@@ -132,7 +132,7 @@ class WP_AI_Workflows_Handoff_Store {
 	}
 
 	/**
-	 * List conversations currently owned by (or awaiting) a human — the source
+	 * List conversations currently owned by (or awaiting) a human - the source
 	 * for the operator inbox. Newest activity first.
 	 *
 	 * @param array $modes Modes to include (default pending_human + human).

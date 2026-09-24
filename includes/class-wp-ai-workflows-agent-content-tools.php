@@ -1,6 +1,6 @@
 <?php
 /**
- * Agent Content Tools — read-only "concierge" search tools (search_products,
+ * Agent Content Tools - read-only "concierge" search tools (search_products,
  * search_content) that turn WordPress/WooCommerce content into rich-message
  * cards for the chat widget. Opt-in per tool (Actions → Capabilities, default
  * OFF); search_products is hidden when WooCommerce is inactive.
@@ -461,7 +461,7 @@ class WP_AI_Workflows_Agent_Content_Tools {
 	 * entities (e.g. WooCommerce's `&#36;` currency symbol or a `&amp;` in a
 	 * title) so the widget can render it as an inert React text node and still
 	 * show real glyphs. The widget re-escapes on render, so this stays injection
-	 * safe — it never becomes markup.
+	 * safe - it never becomes markup.
 	 *
 	 * @param string $raw Raw string (may contain tags/entities).
 	 * @return string

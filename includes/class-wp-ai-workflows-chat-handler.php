@@ -323,7 +323,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 *
 	 * 'credits' => ROUTE_CREDITS; never silently falls back to BYOK.
 	 * 'byok'    => ROUTE_BYOK, even while connected; never silently meters credits.
-	 * ''        => legacy node — defers to the workflow router's hidden global
+	 * ''        => legacy node - defers to the workflow router's hidden global
 	 *              `prefer_credits_when_connected` preference.
 	 *
 	 * Applies uniformly to every AI transport on the node (buffered reply,
@@ -341,7 +341,7 @@ class WP_AI_Workflows_Chat_Handler {
 		if ( WP_AI_Workflows_AI_Router::ROUTE_BYOK === $this->ai_source ) {
 			return WP_AI_Workflows_AI_Router::ROUTE_BYOK;
 		}
-		// Legacy node — exactly today's behaviour (implicit workflow/global route).
+		// Legacy node - exactly today's behaviour (implicit workflow/global route).
 		return WP_AI_Workflows_AI_Router::resolve( array( 'keySource' => $this->key_source ) );
 	}
 
@@ -423,7 +423,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 		$response = WP_AI_Workflows_Platform_Client::proxy_ai( $payload );
 		if ( is_wp_error( $response ) ) {
-			// Never fall back to BYOK — surface a clear gate instead.
+			// Never fall back to BYOK - surface a clear gate instead.
 			switch ( $response->get_error_code() ) {
 				case 'platform_credits':
 					$msg = 'You are out of credits for keyless chat. Please top up to keep this chatbot on Credits, or switch its AI source to your own API keys.';
@@ -452,7 +452,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 * The keyless credits proxy is buffered (non-streaming), so for a streaming
 	 * request that resolves to credits we fetch the buffered reply and push it
 	 * to the browser as a single SSE content frame. Any gate/transport error is
-	 * surfaced as an SSE error frame — never a BYOK fallback.
+	 * surfaced as an SSE error frame - never a BYOK fallback.
 	 *
 	 * @param array $context Prepared message array (already includes the user turn).
 	 * @return void Exits after emitting [DONE].
@@ -489,7 +489,7 @@ class WP_AI_Workflows_Chat_Handler {
 				$this->record_memory_turn( $this->current_message, $content );
 			}
 		} catch ( Exception $e ) {
-			// Clear, non-charged gate — NOT a BYOK completion.
+			// Clear, non-charged gate - NOT a BYOK completion.
 			echo 'data: ' . wp_json_encode(
 				array(
 					'error'   => true,
@@ -858,7 +858,7 @@ class WP_AI_Workflows_Chat_Handler {
 				$data[ $key ] = $value;
 			}
 		}
-		// See call_openrouter() — same reasoning-model constraint applies.
+		// See call_openrouter() - same reasoning-model constraint applies.
 		$this->shape_reasoning_params( $data, $this->model );
 
 		$response = wp_remote_post(
@@ -1011,7 +1011,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 		// Persona migration safety-net: old nodes not re-saved since the
 		// Instructions-field consolidation still carry the persona in
-		// data.agent.persona — prepend it so nothing is lost. No-op once the
+		// data.agent.persona - prepend it so nothing is lost. No-op once the
 		// node is re-saved (persona already merged into $system_prompt).
 		if ( is_array( $this->agent_config )
 			&& ! empty( $this->agent_config['persona'] ) ) {
@@ -1056,8 +1056,8 @@ class WP_AI_Workflows_Chat_Handler {
 		}
 
 		// RAG (opt-in): when the node is backed by a KB, retrieve chunks relevant
-		// to the current message and append them to the system prompt. Fail-open
-		// — any retrieval error leaves the prompt unchanged. Injecting here
+		// to the current message and append them to the system prompt. Fail-open:
+		// any retrieval error leaves the prompt unchanged. Injecting here
 		// covers every downstream path since they all consume $messages.
 		$kb_context = '';
 		$kb_cfg     = $this->knowledge_base;
@@ -1124,7 +1124,7 @@ class WP_AI_Workflows_Chat_Handler {
 			);
 		}
 
-		// Add the current message (skipped when there is none — e.g. rebuilding
+		// Add the current message (skipped when there is none - e.g. rebuilding
 		// the base context to resume a paused approval, where the triggering user
 		// turn is already in the persisted history).
 		if ( '' !== (string) $this->current_message ) {
@@ -1258,7 +1258,7 @@ class WP_AI_Workflows_Chat_Handler {
 	}
 
 	// Human handoff (Phase 2a): conversation-mode routing + keyword trigger.
-	// Opt-in — none of this runs unless data.agent.handoff.enabled is truthy.
+	// Opt-in - none of this runs unless data.agent.handoff.enabled is truthy.
 
 	/**
 	 * Raw handoff config for this node, or null when handoff is not enabled.
@@ -1299,7 +1299,7 @@ class WP_AI_Workflows_Chat_Handler {
 		$workflow_id = $this->session->get_workflow_id();
 		$store       = $manager->store();
 
-		// 1) Already handed off — the human owns it; the bot only relays.
+		// 1) Already handed off - the human owns it; the bot only relays.
 		if ( $store->is_human_controlled( $session_id ) ) {
 			$this->session->add_message( 'user', $message );
 			$manager->relay_visitor_message( $session_id, $config, $message );
@@ -1328,7 +1328,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 			$ack = ! empty( $result['ok'] )
 				? (string) $result['message']
-				: "I'm sorry — I couldn't connect you to a human right now. Please try again shortly.";
+				: "I'm sorry, I couldn't connect you to a human right now. Please try again shortly.";
 			$this->session->add_message( 'assistant', $ack );
 
 			return array(
@@ -1345,7 +1345,7 @@ class WP_AI_Workflows_Chat_Handler {
 			);
 		}
 
-		// Otherwise: not a handoff turn — let the bot/agent answer.
+		// Otherwise: not a handoff turn - let the bot/agent answer.
 		return null;
 	}
 
@@ -1393,7 +1393,7 @@ class WP_AI_Workflows_Chat_Handler {
 			);
 			$ack  = ! empty( $result['ok'] )
 				? (string) $result['message']
-				: "I'm sorry — I couldn't connect you to a human right now. Please try again shortly.";
+				: "I'm sorry, I couldn't connect you to a human right now. Please try again shortly.";
 			$mode = ! empty( $result['ok'] ) ? $result['mode'] : WP_AI_Workflows_Handoff_Store::MODE_BOT;
 			$this->session->add_message( 'assistant', $ack );
 		}
@@ -1455,11 +1455,11 @@ class WP_AI_Workflows_Chat_Handler {
 
 	/**
 	 * Cheap LLM classification of a single message: does the visitor want a human?
-	 * Runs on the node's resolved AI source — the metered credits proxy when the
+	 * Runs on the node's resolved AI source - the metered credits proxy when the
 	 * node's AI source is credits, otherwise the site's own key ({@see
 	 * agent_model_call}). Honouring the source here keeps the invariant that an
 	 * explicit 'credits' choice never silently uses a BYOK key (and vice-versa),
-	 * even for this internal classification call. Throws on transport error — the
+	 * even for this internal classification call. Throws on transport error - the
 	 * caller ({@see message_requests_human_by_intent}) fails open, so a classifier
 	 * fault (including a credits gate) degrades gracefully to keyword-only.
 	 *
@@ -1481,7 +1481,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 		if ( WP_AI_Workflows_AI_Router::ROUTE_CREDITS === $this->resolve_chat_route()
 			&& class_exists( 'WP_AI_Workflows_Platform_Client' ) ) {
-			// Metered path — buffered proxy call, NEVER a BYOK fallback.
+			// Metered path - buffered proxy call, NEVER a BYOK fallback.
 			$resp = WP_AI_Workflows_Platform_Client::proxy_ai(
 				array(
 					'model'    => $this->model,
@@ -1503,7 +1503,7 @@ class WP_AI_Workflows_Chat_Handler {
 	}
 
 	// Agentic engine: governed tool registry + bounded agentic loop. Every chat
-	// node IS an agent — there is no "agent mode" toggle. The node runs the
+	// node IS an agent - there is no "agent mode" toggle. The node runs the
 	// bounded loop only when it has a genuine agentic capability (Actions, or
 	// agent-decided handoff); otherwise it degrades to the legacy single-round
 	// path (one model call, identical output/streaming/cost).
@@ -1515,7 +1515,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 * connect-a-workflow Actions, or human handoff the agent may decide to
 	 * escalate (trigger 'agent'/'both'; keyword-only handoff is pre-loop).
 	 * Otherwise degrades to the classic single-reply path. The removed
-	 * `data.agent.enabled` toggle is ignored — driven purely by capabilities.
+	 * `data.agent.enabled` toggle is ignored - driven purely by capabilities.
 	 *
 	 * @return bool
 	 */
@@ -1524,7 +1524,7 @@ class WP_AI_Workflows_Chat_Handler {
 			return false;
 		}
 
-		// Connect-a-workflow actions — the agent's primary tools.
+		// Connect-a-workflow actions - the agent's primary tools.
 		if ( is_array( $this->actions ) && ! empty( $this->actions ) ) {
 			return true;
 		}
@@ -1552,7 +1552,7 @@ class WP_AI_Workflows_Chat_Handler {
 	/**
 	 * Whether an opt-in content/commerce concierge tool is enabled AND actually
 	 * registerable on this install. search_content is always registerable;
-	 * search_products only when WooCommerce is active — so toggling the product
+	 * search_products only when WooCommerce is active - so toggling the product
 	 * tool on a non-Woo site does NOT force the loop (backward-compat preserved).
 	 *
 	 * @return bool
@@ -1589,7 +1589,7 @@ class WP_AI_Workflows_Chat_Handler {
 	/**
 	 * Whether this agent run is metered through the platform credits proxy (premium
 	 * path) rather than the customer's own provider key (BYOK/local, free). Uses the
-	 * single locked resolver — the same one the plain chat + AI model node use — so
+	 * single locked resolver - the same one the plain chat + AI model node use - so
 	 * an agent run meters exactly when a plain chat call would.
 	 *
 	 * @return bool True = credits-metered, false = BYOK/local (free step-counting).
@@ -1683,7 +1683,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 * the site owner. Kept short; the widget keeps polling so the real reply
 	 * streams in by itself the moment it is approved.
 	 */
-	const AWAITING_APPROVAL_MESSAGE = '⏳ Waiting for the site owner to approve this action — usually quick. I\'ll continue right here as soon as it\'s approved.';
+	const AWAITING_APPROVAL_MESSAGE = '⏳ Waiting for the site owner to approve this action, usually quick. I\'ll continue right here as soon as it\'s approved.';
 
 	/**
 	 * When an agent run paused for approval, persist the arg-locked resume state
@@ -1753,7 +1753,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 	/**
 	 * Fallback resume context for a task that predates the persisted pause state:
-	 * rebuild [system + history] (no new user turn — the triggering message is
+	 * rebuild [system + history] (no new user turn - the triggering message is
 	 * already in the persisted history) so the locked tool still replays against
 	 * a faithful conversation.
 	 *
@@ -1773,7 +1773,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 * Run the bounded agentic loop for a message (non-streaming).
 	 *
 	 * @param string $message User message.
-	 * @return array Response array — same family as the legacy path plus `agent`.
+	 * @return array Response array - same family as the legacy path plus `agent`.
 	 */
 	private function process_agent_message( $message ) {
 		$this->current_message = $message;
@@ -1896,7 +1896,7 @@ class WP_AI_Workflows_Chat_Handler {
 						flush();
 					}
 					: function ( $step ) {
-						// Activity hidden — swallow the step, emit nothing.
+						// Activity hidden - swallow the step, emit nothing.
 						unset( $step );
 					},
 			)
@@ -1995,7 +1995,7 @@ class WP_AI_Workflows_Chat_Handler {
 		$params = is_array( $this->model_params ) ? $this->model_params : array();
 
 		if ( $is_openrouter ) {
-			// OpenRouter forwards straight to the underlying provider —
+			// OpenRouter forwards straight to the underlying provider:
 			// shape it exactly like the direct-OpenAI branch below.
 			$data = array(
 				'model'    => $model,
@@ -2116,7 +2116,7 @@ class WP_AI_Workflows_Chat_Handler {
 			// Credit-metered simple chat: the keyless proxy is buffered
 			// (non-streaming). When this node's AI source resolves to credits,
 			// emit the buffered completion as SSE instead of streaming through a
-			// BYOK key — an explicit 'credits' choice never falls back silently.
+			// BYOK key - an explicit 'credits' choice never falls back silently.
 			if ( WP_AI_Workflows_AI_Router::ROUTE_CREDITS === $this->resolve_chat_route() ) {
 				$this->stream_credits_buffered_response( $context );
 				return;
@@ -2186,7 +2186,7 @@ class WP_AI_Workflows_Chat_Handler {
 	 * @return void
 	 */
 	private function harden_streaming_curl( $ch, $target_url ) {
-		// Explicit TLS verification — do not rely on libcurl defaults.
+		// Explicit TLS verification - do not rely on libcurl defaults.
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, 2 );
 
@@ -2278,7 +2278,7 @@ class WP_AI_Workflows_Chat_Handler {
 			$data['tools'] = $tools;
 		}
 
-		// Reasoning models reject a non-default temperature/top_p (HTTP 400) —
+		// Reasoning models reject a non-default temperature/top_p (HTTP 400):
 		// omit them entirely for those models.
 		if ( ! WP_AI_Workflows_Utilities::is_reasoning_model( $model ) ) {
 			if ( isset( $this->model_params['temperature'] ) ) {
@@ -2378,7 +2378,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 						$this->execute_action_async( $action_id, $arguments );
 
-						// Don't send DONE yet — the frontend polls for the action result.
+						// Don't send DONE yet - the frontend polls for the action result.
 						exit;
 					}
 				}
@@ -2508,7 +2508,7 @@ class WP_AI_Workflows_Chat_Handler {
 				$data[ $key ] = $value;
 			}
 		}
-		// See call_openrouter() — same reasoning-model constraint applies.
+		// See call_openrouter() - same reasoning-model constraint applies.
 		$this->shape_reasoning_params( $data, $this->model );
 
 		$ch = curl_init( 'https://openrouter.ai/api/v1/chat/completions' );
@@ -2573,7 +2573,7 @@ class WP_AI_Workflows_Chat_Handler {
 
 										$this->execute_action_async( $action_id, $arguments );
 
-										exit; // No DONE — the frontend polls for the action result.
+										exit; // No DONE - the frontend polls for the action result.
 									}
 								}
 							} elseif ( ! empty( $responseAccumulator ) ) {
@@ -2702,7 +2702,7 @@ class WP_AI_Workflows_Chat_Handler {
 				return;
 			}
 
-			// Still in progress — reschedule and check again shortly.
+			// Still in progress - reschedule and check again shortly.
 			if ( $execution->status === 'processing' || $execution->status === 'paused' ) {
 				wp_schedule_single_event(
 					time() + 3,

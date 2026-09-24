@@ -186,7 +186,7 @@ class WP_AI_Workflows_Generator {
 						array(
 							'code'     => 'invalid_json',
 							'severity' => 'error',
-							'message'  => 'Your output was not a single valid JSON object. Return ONLY one JSON object with "nodes" and "edges" — no prose, no code fences.',
+							'message'  => 'Your output was not a single valid JSON object. Return ONLY one JSON object with "nodes" and "edges": no prose, no code fences.',
 						),
 					);
 				} else {
@@ -360,10 +360,10 @@ class WP_AI_Workflows_Generator {
 
 	/**
 	 * Clarify-first PHASE 1: a lightweight, cheap first pass that inspects the
-	 * user's request and returns 0–4 genuinely ambiguous, outcome-changing
+	 * user's request and returns 0 to 4 genuinely ambiguous, outcome-changing
 	 * questions (each with concrete option chips) for the UI to ask BEFORE the
-	 * expensive contract-aware build. Returns a sanitized list — never the raw
-	 * model text — so the REST layer can hand it straight to the frontend.
+	 * expensive contract-aware build. Returns a sanitized list - never the raw
+	 * model text - so the REST layer can hand it straight to the frontend.
 	 *
 	 * Deliberately does NOT send the full node catalog: it only needs enough
 	 * capability context to ask smart questions, so the prompt stays small and
@@ -396,7 +396,7 @@ Each array element MUST have exactly this shape:
 Rules:
 - 2 to 4 options per question. Each option must be a concrete, mutually distinct choice.
 - Set "allowMultiple" to true only when several options can sensibly be combined.
-- NEVER ask which AI model to use — that is chosen separately.
+- NEVER ask which AI model to use. That is chosen separately.
 - NEVER ask about visual styling, node positions, colors, or anything cosmetic.
 - Good questions cover: what triggers the workflow, where the result goes, draft vs. publish, whether a human must approve first, tone or format, or which fields to extract.
 
@@ -438,7 +438,7 @@ PROMPT;
 	/**
 	 * Parse + STRICTLY sanitize the analyze model's reply into a safe question list.
 	 * Tolerates a fenced code block. Silently drops malformed questions/options and
-	 * caps the result at 4 questions with 2–4 options each. Returns [] on any parse
+	 * caps the result at 4 questions with 2 to 4 options each. Returns [] on any parse
 	 * failure so the caller can fall through to a direct build.
 	 *
 	 * @param string $content Raw model reply.
@@ -591,7 +591,7 @@ PROMPT;
 	 * Force the user's chosen AI model onto the general LLM nodes (aiModel, chat).
 	 * Runs after cleaning so the clarify-step pick is authoritative even when the
 	 * model forgot to set it. Leaves specialized nodes (e.g. Research/Perplexity,
-	 * media generators) alone — their model spaces are different.
+	 * media generators) alone - their model spaces are different.
 	 *
 	 * @param array[] $nodes        Cleaned nodes.
 	 * @param string  $chosen_model Model id to apply.
@@ -625,10 +625,10 @@ PROMPT;
 	private function build_repair_message( $issues ) {
 		$errors = WP_AI_Workflows_Workflow_Validator::to_repair_text( $issues );
 
-		return "The workflow you returned FAILED validation. Fix ONLY the problems listed and return the COMPLETE corrected workflow as a single JSON object (\"nodes\" and \"edges\") — no prose, no code fences.\n\n"
+		return "The workflow you returned FAILED validation. Fix ONLY the problems listed and return the COMPLETE corrected workflow as a single JSON object (\"nodes\" and \"edges\"): no prose, no code fences.\n\n"
 			. "Honour these contracts:\n"
 			. "- Use ONLY node types that appear in the catalog.\n"
-			. "- A plain AI Prompt / Research / Write Article / Summary node produces ONE text output, referenced ONLY as [Input from node-id]. It has NO named fields — do NOT write [[field] from that-node] unless you ALSO instruct that node (in its content) to return strict JSON containing that exact key.\n"
+			. "- A plain AI Prompt / Research / Write Article / Summary node produces ONE text output, referenced ONLY as [Input from node-id]. It has NO named fields. Do NOT write [[field] from that-node] unless you ALSO instruct that node (in its content) to return strict JSON containing that exact key.\n"
 			. "- To fill several DISTINCT fields of a consumer (e.g. a Post's title AND content) from one AI result: either (a) make the AI node emit strict JSON and map [[key] from node-id] per field; or (b) insert an AI Extract Information node (one extractionField per target field) and map [[field] from extractInformation-id]; or (c) use a separate AI node per field.\n"
 			. "- Every [Input from X] and [[field] from X] must reference a node that EXISTS in the workflow and is connected upstream.\n"
 			. "- Chat action outputs are [[field] from chat-id:action-id]; their edges set sourceHandle to the action id.\n\n"
@@ -1550,7 +1550,7 @@ PROMPT;
 	 * Shared by the generator and the in-canvas assistant so both emit real,
 	 * registry-sourced slugs/actions. Returns fully-resolved node data (appSlug,
 	 * appName, appIcon, toolName, toolConfig, authStatus='none') or null when the
-	 * named service cannot be resolved — callers must never fall back to a guess.
+	 * named service cannot be resolved - callers must never fall back to a guess.
 	 *
 	 * Generation cannot connect the user's own account (per-user OAuth), so the
 	 * resolved node lands in a needs-connect state (authStatus='none').
@@ -1565,7 +1565,7 @@ PROMPT;
 		$data = is_array( $data ) ? $data : array();
 
 		// Seed the live search from the named service (preferred). Fall back to any
-		// model-provided slug/name so a node is still grounded — but ALWAYS re-resolve
+		// model-provided slug/name so a node is still grounded - but ALWAYS re-resolve
 		// so the emitted slug/action come from real registry results, not a guess.
 		$seed = '';
 		foreach ( array( 'appService', 'appSlug', 'appName', 'nodeName' ) as $k ) {
@@ -1791,7 +1791,7 @@ PROMPT;
 			'save',
 			'mediaGenerator',
 			'createFile',
-			'MCPClient', // Connect an App — delivers the result into an external app.
+			'MCPClient', // Connect an App - delivers the result into an external app.
 		);
 
 		$trigger_node_types = array(

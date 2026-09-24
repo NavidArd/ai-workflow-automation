@@ -1,15 +1,15 @@
 <?php
 /**
- * Handoff Provider — the pluggable seam for passing a conversation to a human.
+ * Handoff Provider - the pluggable seam for passing a conversation to a human.
  *
  * Agent mode Phase 2a. Mirrors the memory/KB provider seam: a conversation can
  * be handed off to a human through any implementation of this interface. The
- * conversation gains a mode (bot | pending_human | human — see
+ * conversation gains a mode (bot | pending_human | human - see
  * {@see WP_AI_Workflows_Handoff_Store}); while a human owns it the agent/bot
  * stops auto-responding and only relays messages both ways.
  *
  * Contract (every method is best-effort / fail-safe; implementations MUST NOT
- * leak provider errors to the visitor — they return WP_Error or throw, and the
+ * leak provider errors to the visitor - they return WP_Error or throw, and the
  * manager degrades gracefully):
  *
  *   start_handoff( $conversation, $transcript, $metadata ) : string|WP_Error

@@ -32,7 +32,7 @@ class WP_AI_Workflows_Workflow {
 
 	public static function get_workflows( $request ) {
 		try {
-			// Phase 3 (R6.5): local execution is free — the SLM license gate is retired.
+			// Phase 3 (R6.5): local execution is free - the SLM license gate is retired.
 
 			WP_AI_Workflows_Utilities::debug_log(
 				'Attempting to fetch workflows',
@@ -209,7 +209,7 @@ class WP_AI_Workflows_Workflow {
 	}
 
 	public static function create_workflow( $request ) {
-		// Phase 3 (R6.5): local execution is free — the SLM license gate is retired.
+		// Phase 3 (R6.5): local execution is free - the SLM license gate is retired.
 
 		WP_AI_Workflows_Utilities::debug_function( __FUNCTION__, array( 'request' => $request->get_json_params() ) );
 
@@ -266,7 +266,7 @@ class WP_AI_Workflows_Workflow {
 	}
 
 	public static function update_workflow( $request ) {
-		// Phase 3 (R6.5): local execution is free — the SLM license gate is retired.
+		// Phase 3 (R6.5): local execution is free - the SLM license gate is retired.
 
 		if ( WP_DEBUG ) {
 			ini_set( 'display_errors', 1 );
@@ -568,7 +568,7 @@ class WP_AI_Workflows_Workflow {
 
 	public static function get_single_workflow( $request ) {
 		try {
-			// Phase 3 (R6.5): local execution is free — the SLM license gate is retired.
+			// Phase 3 (R6.5): local execution is free - the SLM license gate is retired.
 
 			$id = $request['id'];
 
@@ -766,7 +766,7 @@ class WP_AI_Workflows_Workflow {
 		// running the workflow inline would block the request until the whole run
 		// finished, so the builder's live per-node panel would only ever see the
 		// results all-at-once. There we hand the run to an immediately-scheduled
-		// cron event instead and return now — see dispatch_manual_run_async().
+		// cron event instead and return now - see dispatch_manual_run_async().
 		$can_early_flush = function_exists( 'fastcgi_finish_request' );
 
 		$wpdb->insert(
@@ -775,7 +775,7 @@ class WP_AI_Workflows_Workflow {
 				'workflow_id'   => $workflow_id,
 				'workflow_name' => $target_workflow['name'],
 				// fpm executes inline below, so the row starts 'processing'. Every
-				// other SAPI starts 'pending' — the sentinel the async cron runner
+				// other SAPI starts 'pending' - the sentinel the async cron runner
 				// claims atomically (pending -> processing) so a run can never
 				// double-execute.
 				'status'        => $can_early_flush ? 'processing' : 'pending',
@@ -813,7 +813,7 @@ class WP_AI_Workflows_Workflow {
 			);
 		}
 
-		// Send response — same shape/id the builder polls on, on every SAPI.
+		// Send response - same shape/id the builder polls on, on every SAPI.
 		header( 'Content-Type: application/json' );
 		echo wp_json_encode(
 			array(
@@ -863,7 +863,7 @@ class WP_AI_Workflows_Workflow {
 	 * event to run the execution and spawns cron so it fires without waiting for
 	 * the next visitor. A short-lived transient carries the run's arguments so the
 	 * status poller can kick the run inline as a last resort if cron never fires
-	 * (e.g. DISABLE_WP_CRON with no working loopback) — a run is never lost.
+	 * (e.g. DISABLE_WP_CRON with no working loopback) - a run is never lost.
 	 *
 	 * Only user-supplied trigger content and the (non-secret) session token are
 	 * carried in the event/transient; no credentials are serialized. The runner
@@ -951,7 +951,7 @@ class WP_AI_Workflows_Workflow {
 
 		// Atomic claim: transition 'pending' -> 'processing' for THIS row only. If
 		// another worker (a doubled cron event, or a racing poll-kick) already
-		// claimed it, this affects 0 rows and we bail — the run never doubles.
+		// claimed it, this affects 0 rows and we bail - the run never doubles.
 		$claimed = $wpdb->query(
 			$wpdb->prepare(
 				"UPDATE %i SET status = 'processing', updated_at = %s WHERE id = %d AND status = 'pending'",
@@ -1125,7 +1125,7 @@ class WP_AI_Workflows_Workflow {
 
 		$remote = WP_AI_Workflows_Platform_Client::get_execution( $pid );
 		if ( is_wp_error( $remote ) ) {
-			// Transient poll failure — leave the row running for the next poll.
+			// Transient poll failure - leave the row running for the next poll.
 			return array( 'status' => 'processing', 'is_complete' => false );
 		}
 
@@ -1223,7 +1223,7 @@ class WP_AI_Workflows_Workflow {
 	/**
 	 * Self-rescheduling headless poller (wp_ai_workflows_poll_cloud_execution). Runs
 	 * every 60s up to 30 minutes; on timeout the row is marked still_running_cloud
-	 * (never a hang, never data loss — R7.5).
+	 * (never a hang, never data loss - R7.5).
 	 *
 	 * @param int $execution_id
 	 * @param int $attempt
@@ -1251,7 +1251,7 @@ class WP_AI_Workflows_Workflow {
 	}
 
 	public static function execute_workflow( $workflow_id, $initial_data = null, $execution_id = null, $session_id = null, $resume_from_node = null, $human_action = null, $action_id = null ) {
-		// Phase 3 (R6.5): local execution is free — the SLM license gate is retired.
+		// Phase 3 (R6.5): local execution is free - the SLM license gate is retired.
 
 		WP_AI_Workflows_Utilities::debug_log(
 			'Starting/Resuming workflow execution',
@@ -1332,11 +1332,11 @@ class WP_AI_Workflows_Workflow {
 				)
 			);
 			if ( $existing_execution ) {
-				$trigger_data = json_decode( $existing_execution->input_data, true );
+				$trigger_data = json_decode( (string) $existing_execution->input_data, true );
 			}
 		}
 
-		// Cloud execution branch (R3.2/R3.6). Fresh runs only — resume/HITL stay
+		// Cloud execution branch (R3.2/R3.6). Fresh runs only - resume/HITL stay
 		// local. Covers manual, scheduled, and event/RSS triggers (all headless-safe).
 		$execution_mode = isset( $workflow['executionMode'] ) ? $workflow['executionMode'] : 'local';
 
@@ -3560,7 +3560,7 @@ class WP_AI_Workflows_Workflow {
 	 * helpdesk providers (Chatwoot, Zendesk Sunshine, Intercom). Mirrors the
 	 * API-call credential pattern: values are stored with an `enc_` prefix; the
 	 * frontend masks a saved secret as '********' and we preserve the
-	 * previously-stored ciphertext when it does. Never throws — a credential that
+	 * previously-stored ciphertext when it does. Never throws - a credential that
 	 * cannot be encrypted is dropped rather than stored in clear.
 	 *
 	 * @param array      $node     Chat node being saved.

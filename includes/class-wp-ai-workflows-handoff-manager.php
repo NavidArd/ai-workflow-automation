@@ -1,6 +1,6 @@
 <?php
 /**
- * Handoff Manager — orchestrates human handoff for a chat/agent conversation.
+ * Handoff Manager - orchestrates human handoff for a chat/agent conversation.
  *
  * Central seam between the chat handler / agent tool / REST webhooks and the
  * pluggable {@see WP_AI_Workflows_Handoff_Provider} + the
@@ -164,7 +164,7 @@ class WP_AI_Workflows_Handoff_Manager {
 			case self::PROVIDER_NATIVE:
 				return new WP_AI_Workflows_Handoff_Native( isset( $config['native'] ) ? $config['native'] : array() );
 			default:
-				// An unknown/not-yet-built provider never dead-ends — fall back to
+				// An unknown/not-yet-built provider never dead-ends - fall back to
 				// Native so a handoff still reaches a human.
 				return new WP_AI_Workflows_Handoff_Native( array() );
 		}
@@ -213,7 +213,7 @@ class WP_AI_Workflows_Handoff_Manager {
 	}
 
 	/**
-	 * Cheap lexical pre-gate for intent classification — a high-recall net that
+	 * Cheap lexical pre-gate for intent classification - a high-recall net that
 	 * keeps the paid model classification off the majority of ordinary turns.
 	 *
 	 * @param string $message Visitor message.
@@ -227,14 +227,14 @@ class WP_AI_Workflows_Handoff_Manager {
 	}
 
 	/**
-	 * Detect an intent to reach a human semantically — catches natural phrasings
+	 * Detect an intent to reach a human semantically - catches natural phrasings
 	 * that the keyword list misses. The model call is injected as $classifier so
 	 * the transport stays in the chat handler and this stays unit-testable.
 	 * Fail-open: any classifier error is treated as "no intent".
 	 *
 	 * @param string        $message    Visitor message.
 	 * @param array         $config     Normalized config.
-	 * @param callable|null $classifier fn(string $message):bool — true when the
+	 * @param callable|null $classifier fn(string $message):bool - true when the
 	 *                                  message asks for a human.
 	 * @return bool
 	 */
@@ -252,7 +252,7 @@ class WP_AI_Workflows_Handoff_Manager {
 		try {
 			return (bool) call_user_func( $classifier, $msg );
 		} catch ( \Throwable $e ) {
-			// Fail-open — never let a classifier fault break the chat turn.
+			// Fail-open - never let a classifier fault break the chat turn.
 			return false;
 		}
 	}

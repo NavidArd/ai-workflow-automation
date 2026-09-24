@@ -34,7 +34,7 @@ class WP_AI_Workflows_Whitelabel {
 	 * NOTE: access control lives in the REST layer
 	 * (WP_AI_Workflows_Platform_Client::whitelabel_management_gate() enforces
 	 * connected + Business tier + org owner with a live management session). The
-	 * retired SLM "agency license" check has been removed — there is no license path
+	 * retired SLM "agency license" check has been removed - there is no license path
 	 * to white-labeling anymore.
 	 */
 	public function get_whitelabel_settings() {

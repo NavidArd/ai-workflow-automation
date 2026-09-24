@@ -1,10 +1,10 @@
 <?php
 /**
- * WP_AI_Workflows_AI_Router — decides, per AI call, whether the request routes
+ * WP_AI_Workflows_AI_Router - decides, per AI call, whether the request routes
  * through the customer's own provider key (BYOK, local) or through the metered
  * platform credits proxy (keyless).
  *
- * LOCKED precedence (workflow-level source of truth — the per-node `keySource`
+ * LOCKED precedence (workflow-level source of truth - the per-node `keySource`
  * selector was retired; the workflow's Local/Cloud execution mode is now the
  * single control):
  *   NOT connected                 =>  ALWAYS 'byok' (short-circuits everything).
@@ -14,7 +14,7 @@
  *   standalone chat run)              setting: 'credits' when on, else 'byok'.
  *
  * This resolver is the ONLY place the route is decided. The 402/502 failure paths
- * NEVER fall back to BYOK (locked Q4) — see WP_AI_Workflows_Node_Execution.
+ * NEVER fall back to BYOK (locked Q4) - see WP_AI_Workflows_Node_Execution.
  *
  * @package WP_AI_Workflows
  */
@@ -87,7 +87,7 @@ class WP_AI_Workflows_AI_Router {
 	 * @return string self::ROUTE_BYOK | self::ROUTE_CREDITS
 	 */
 	public static function resolve( $node_data = array() ) {
-		// Disconnected sites can never meter — BYOK is the only option (free-first).
+		// Disconnected sites can never meter - BYOK is the only option (free-first).
 		if ( ! WP_AI_Workflows_Platform_Client::is_connected() ) {
 			return self::ROUTE_BYOK;
 		}
@@ -100,7 +100,7 @@ class WP_AI_Workflows_AI_Router {
 			return self::ROUTE_BYOK;
 		}
 
-		// No workflow context (e.g. a standalone chat run) — fall back to the
+		// No workflow context (e.g. a standalone chat run) - fall back to the
 		// global preference so credit-metered chat keeps working.
 		return self::prefer_credits() ? self::ROUTE_CREDITS : self::ROUTE_BYOK;
 	}

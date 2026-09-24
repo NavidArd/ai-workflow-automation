@@ -1,12 +1,12 @@
 <?php
 /**
- * Agent Tool — a single governed capability the agent can invoke.
+ * Agent Tool - a single governed capability the agent can invoke.
  *
  * A uniform abstraction over every kind of capability the Agent node can use
  * (WP actions, MCP tools, KB search, provider-native search, safe built-ins).
  * Each tool carries its own JSON schema, per-tool guardrails and an executor
  * callable. The {@see WP_AI_Workflows_Agent_Tool_Registry} builds, governs and
- * runs these. Introduced with Agent mode (Phase 1) — additive, opt-in.
+ * runs these. Introduced with Agent mode (Phase 1) - additive, opt-in.
  *
  * @package WP_AI_Workflows
  */
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
 
 class WP_AI_Workflows_Agent_Tool {
 
-	/* Tool kinds — where the capability comes from. */
+	/* Tool kinds - where the capability comes from. */
 	const KIND_FUNCTION = 'function'; // WP chat "action" (dispatches a workflow).
 	const KIND_MCP      = 'mcp';      // External MCP server tool.
 	const KIND_KB       = 'kb';       // Knowledge base (RAG) search.

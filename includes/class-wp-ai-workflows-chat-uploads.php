@@ -1,6 +1,6 @@
 <?php
 /**
- * Chat Uploads — secure, opt-in file sharing inside a chat conversation.
+ * Chat Uploads - secure, opt-in file sharing inside a chat conversation.
  *
  * Files are validated by real bytes (not client-declared type), size-capped,
  * stored outside any web-executable path, and served only via a token-gated
@@ -30,7 +30,7 @@ class WP_AI_Workflows_Chat_Uploads {
 
 	/**
 	 * Server allowlist: extension group => canonical MIME. This is the outer
-	 * bound — the node's own allowedTypes can only ever narrow it. Text-family
+	 * bound - the node's own allowedTypes can only ever narrow it. Text-family
 	 * extensions map to text/plain because that is what finfo actually reports
 	 * for .md/.csv, so the wp_check_filetype_and_ext real-byte cross-check
 	 * accepts them (the extension is still constrained to this list).
@@ -119,7 +119,7 @@ class WP_AI_Workflows_Chat_Uploads {
 
 	/**
 	 * Build the effective wp_check_filetype allowlist for this node: the server
-	 * allowlist intersected with the node's own allowedTypes (fail-closed — an
+	 * allowlist intersected with the node's own allowedTypes (fail-closed - an
 	 * unknown/dangerous extension can never be added, only removed).
 	 *
 	 * @param array $config Normalized config.
@@ -183,7 +183,7 @@ class WP_AI_Workflows_Chat_Uploads {
 	private static function write_guards( $dir ) {
 		$ht = trailingslashit( $dir ) . '.htaccess';
 		if ( ! file_exists( $ht ) ) {
-			$rules  = "# Chat uploads: no direct web access — served only via the token-gated REST route.\n";
+			$rules  = "# Chat uploads: no direct web access - served only via the token-gated REST route.\n";
 			$rules .= "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n";
 			$rules .= "<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n";
 			@file_put_contents( $ht, $rules ); // phpcs:ignore WordPress.WP.AlternativeFunctions, WordPress.PHP.NoSilencedErrors

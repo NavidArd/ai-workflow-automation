@@ -9,7 +9,7 @@ class WP_AI_Workflows_License {
 
 	/**
 	 * Persist the legacy license key locally. In v2.0 there is NO remote
-	 * activation and NO shared secret — the key is simply stored so the platform
+	 * activation and NO shared secret - the key is simply stored so the platform
 	 * client can redeem it server-side when the site connects to an account.
 	 *
 	 * @param string $license_key Raw key from the request.

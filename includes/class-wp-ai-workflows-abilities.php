@@ -1,6 +1,6 @@
 <?php
 /**
- * Abilities API integration — exposes workflows as WordPress "Abilities", bridged
+ * Abilities API integration - exposes workflows as WordPress "Abilities", bridged
  * to MCP via the official MCP Adapter plugin when present. Execution is LOCAL
  * (BYOK); feature-detected so it no-ops cleanly without the Abilities API.
  *
@@ -30,7 +30,7 @@ class WP_AI_Workflows_Abilities {
 
 	/**
 	 * Settings key (inside the `wp_ai_workflows_settings` option) for the
-	 * opt-in toggle. Default OFF — the owner must explicitly expose workflows.
+	 * opt-in toggle. Default OFF - the owner must explicitly expose workflows.
 	 */
 	const SETTING_KEY = 'expose_to_agents';
 
@@ -299,7 +299,7 @@ class WP_AI_Workflows_Abilities {
 	/**
 	 * execute_callback for a `wp-ai-workflows/run-{id}` ability.
 	 *
-	 * Runs the workflow locally and returns its output. Never throws — returns a
+	 * Runs the workflow locally and returns its output. Never throws - returns a
 	 * WP_Error on failure per the Abilities API contract.
 	 *
 	 * @param string $workflow_id Workflow id captured at registration time.
@@ -535,7 +535,7 @@ class WP_AI_Workflows_Abilities {
 
 	/**
 	 * The MCP server endpoint URL, when the adapter is active. The adapter
-	 * registers a REST route at `{namespace}/{route}` — here `wp-ai-workflows/mcp`.
+	 * registers a REST route at `{namespace}/{route}` - here `wp-ai-workflows/mcp`.
 	 *
 	 * @return string|null
 	 */

@@ -300,7 +300,7 @@ SQL;
 	 */
 	private function bump_doc_count( $kb_id, $delta ) {
 		global $wpdb;
-		// %i table + %d/%s bound params — no interpolation.
+		// %i table + %d/%s bound params - no interpolation.
 		$wpdb->query(
 			$wpdb->prepare(
 				"UPDATE %i SET doc_count = doc_count + %d WHERE id = %s",
@@ -727,7 +727,7 @@ SQL;
 
 	/**
 	 * Retrieve top-K chunks and format them into a context preamble suitable
-	 * for prepending to a prompt. Never throws — on any failure it logs and
+	 * for prepending to a prompt. Never throws - on any failure it logs and
 	 * returns an empty string so the AI call proceeds unchanged (fail-open,
 	 * opt-in behaviour: no KB context is simply no context).
 	 *

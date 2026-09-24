@@ -224,7 +224,7 @@ class WP_AI_Workflows_Assistant_Chat {
 
 			// STATIC, cacheable prefix: the instructions + manifest node catalog.
 			// It is byte-identical across EVERY assistant request (chat AND edit
-			// mode — the active mode now lives in the dynamic user turn below, not
+			// mode - the active mode now lives in the dynamic user turn below, not
 			// in this prefix), so it is a valid Anthropic prompt-cache prefix.
 			$system_prompt = $this->get_system_prompt();
 
@@ -234,7 +234,7 @@ class WP_AI_Workflows_Assistant_Chat {
 			// OpenRouter forwards `cache_control` to Anthropic; on a non-Anthropic
 			// fallback model it is simply ignored (safe). The conversation history
 			// and the user's current turn (with the live canvas state) go LAST, as
-			// the dynamic, uncached tail — mirrors the generator's proven approach.
+			// the dynamic, uncached tail - mirrors the generator's proven approach.
 			$messages = array(
 				array(
 					'role'    => 'system',
@@ -249,7 +249,7 @@ class WP_AI_Workflows_Assistant_Chat {
 			);
 
 			// Conversation history (dynamic; not cached). The workflow-changes-approval
-			// placeholder rows carry no useful text for the model — represent them as a
+			// placeholder rows carry no useful text for the model - represent them as a
 			// short note instead of leaking the raw sentinel string into the transcript.
 			foreach ( $this->get_chat_history() as $msg ) {
 				$text = ( 'workflow-changes-approval' === $msg->content )

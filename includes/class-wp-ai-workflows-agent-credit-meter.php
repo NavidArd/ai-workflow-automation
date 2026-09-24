@@ -1,11 +1,11 @@
 <?php
 /**
- * Agent Credit Meter — credits-proxy model transport for Agent mode.
+ * Agent Credit Meter - credits-proxy model transport for Agent mode.
  *
  * Dependency-injected model-caller that slots into the orchestrator's
  * $model_caller seam: routes model calls through the metered platform proxy
  * (`/proxy/ai`), enforces a per-run credit cap, and hard-stops on
- * insufficient credits — there is never a silent BYOK fallback (locked policy).
+ * insufficient credits - there is never a silent BYOK fallback (locked policy).
  *
  * @package WP_AI_Workflows
  */
@@ -61,7 +61,7 @@ class WP_AI_Workflows_Agent_Credit_Meter {
 	/** @var int Per-run credit ceiling. */
 	private $run_cap;
 
-	/** @var callable fn(array $payload):array|WP_Error — defaults to proxy_ai. */
+	/** @var callable fn(array $payload):array|WP_Error - defaults to proxy_ai. */
 	private $proxy;
 
 	/** @var float Cumulative credits settled across the run. */

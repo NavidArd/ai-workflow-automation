@@ -32,7 +32,7 @@ if ( class_exists( 'WP_AI_Workflows_Legacy_Guard', false ) ) {
 class WP_AI_Workflows_Legacy_Guard {
 
 	/**
-	 * Exact folder slug of the old Lite plugin (also the new wp.org slug — see
+	 * Exact folder slug of the old Lite plugin (also the new wp.org slug - see
 	 * the self-exclusion in is_legacy_basename()).
 	 */
 	const LITE_SLUG = 'ai-workflow-automation-lite';
@@ -109,7 +109,7 @@ class WP_AI_Workflows_Legacy_Guard {
 	}
 
 	/**
-	 * Does a plugin basename's FOLDER identify a legacy copy — and is it not us?
+	 * Does a plugin basename's FOLDER identify a legacy copy - and is it not us?
 	 *
 	 * @param string $basename e.g. `some-plugin/some-plugin.php`.
 	 * @return bool
@@ -229,7 +229,7 @@ class WP_AI_Workflows_Legacy_Guard {
 
 		echo '<div class="notice notice-success is-dismissible"><p>';
 		echo esc_html__(
-			'AI Workflow Automation: an older version (Lite or Pro) was deactivated automatically — your workflows and settings are intact. You can safely remove the old plugin folder from wp-content/plugins via FTP; avoid its Delete button on the Plugins screen.',
+			'AI Workflow Automation: an older version (Lite or Pro) was deactivated automatically. Your workflows and settings are intact. You can safely remove the old plugin folder from wp-content/plugins via FTP; avoid its Delete button on the Plugins screen.',
 			'wp-ai-workflows'
 		);
 		echo '</p></div>';
@@ -246,7 +246,7 @@ class WP_AI_Workflows_Legacy_Guard {
 
 		echo '<div class="notice notice-warning is-dismissible"><p>';
 		echo esc_html__(
-			'AI Workflow Automation: another copy of this plugin (an older Lite or Pro version) is already active, so this copy did not load. The older copy is being deactivated automatically — your workflows and settings are intact.',
+			'AI Workflow Automation: another copy of this plugin (an older Lite or Pro version) is already active, so this copy did not load. The older copy is being deactivated automatically. Your workflows and settings are intact.',
 			'wp-ai-workflows'
 		);
 		echo '</p></div>';

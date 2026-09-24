@@ -1,6 +1,6 @@
 <?php
 /**
- * Native Handoff Provider — zero external dependency.
+ * Native Handoff Provider - zero external dependency.
  *
  * Agent mode Phase 2a. Hands off to a WordPress admin/agent inside the site: it
  * creates a human task (reusing {@see WP_AI_Workflows_Human_Tasks}) carrying the

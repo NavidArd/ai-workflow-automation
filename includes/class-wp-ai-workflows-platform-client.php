@@ -1,6 +1,6 @@
 <?php
 /**
- * WP_AI_Workflows_Platform_Client — single owner of all HTTP communication with
+ * WP_AI_Workflows_Platform_Client - single owner of all HTTP communication with
  * the credits/cloud platform. Browser JS never talks to the platform directly;
  * calls go through plugin REST, keeping the site key and user JWT server-side
  * only. Secrets are never logged (see redact()), returned by REST, or
@@ -70,10 +70,10 @@ class WP_AI_Workflows_Platform_Client {
 	 * Local record of the automatic legacy-key redemption so we only auto-attempt
 	 * ONCE (idempotency across reconnects), plus the celebratory welcome payload the
 	 * account UI reveals. Shape:
-	 *   { state:'pending_attempt', queuedAt }                 — queued, not yet run
-	 *   { state:'done', mechanism, tier, granted,             — a grant happened
+	 *   { state:'pending_attempt', queuedAt }                 - queued, not yet run
+	 *   { state:'done', mechanism, tier, granted,             - a grant happened
 	 *     monthlyCredits, endsAt, attemptedAt }
-	 *   { state:'exhausted', outcome:'invalid'|'already'|     — a definitive non-grant
+	 *   { state:'exhausted', outcome:'invalid'|'already'|     - a definitive non-grant
 	 *     'not_redeemable', attemptedAt }                       (404/409/422; stay quiet)
 	 * A DEFINITIVE state (done|exhausted) is never re-attempted. A transient failure
 	 * (503/429/401/network) leaves the record at pending_attempt so a later connect or
@@ -92,7 +92,7 @@ class WP_AI_Workflows_Platform_Client {
 	const LOCK_AUTO_REDEEM = 'wpaw_auto_redeem_lock';
 
 	/**
-	 * Register hooks. Called once from run_wp_ai_workflows(). Kept minimal — the
+	 * Register hooks. Called once from run_wp_ai_workflows(). Kept minimal - the
 	 * headless cloud-execution poller (Wave 2) registers its self-rescheduling event
 	 * here.
 	 */
@@ -159,7 +159,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Build the optional bearer header the updater attaches for download
-	 * entitlement (R6.3). Returns '' when disconnected or on decrypt failure — the
+	 * entitlement (R6.3). Returns '' when disconnected or on decrypt failure - the
 	 * update check must never depend on this. The key never leaves the server.
 	 *
 	 * @return string 'Bearer wpaw_…' or '' .
@@ -212,7 +212,7 @@ class WP_AI_Workflows_Platform_Client {
 	 * time with a clear message instead of minutes later with a socket error.
 	 *
 	 * Conservative on purpose: anything not provably local passes (a public URL
-	 * that happens to be firewalled still fails fast cloud-side — the engine now
+	 * that happens to be firewalled still fails fast cloud-side - the engine now
 	 * treats refused/unresolvable callbacks as non-retryable).
 	 *
 	 * @param string $host Hostname (no scheme/path). IPv6 may be bracketed.
@@ -244,7 +244,7 @@ class WP_AI_Workflows_Platform_Client {
 			return false === filter_var( $bare, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE );
 		}
 
-		// A hostname with no dot has no TLD ("mysite", "wordpress") — LAN-only.
+		// A hostname with no dot has no TLD ("mysite", "wordpress") - LAN-only.
 		if ( false === strpos( $bare, '.' ) ) {
 			return true;
 		}
@@ -284,7 +284,7 @@ class WP_AI_Workflows_Platform_Client {
 		return new WP_Error(
 			'cloud_callback_unreachable',
 			sprintf(
-				"Your WordPress site (%s) isn't reachable from the cloud. Workflows with WordPress-action nodes (like Post) need a publicly accessible site URL — run this workflow in Local mode instead.",
+				"Your WordPress site (%s) isn't reachable from the cloud. Workflows with WordPress-action nodes (like Post) need a publicly accessible site URL; run this workflow in Local mode instead.",
 				$display
 			),
 			array( 'status' => 400 )
@@ -300,7 +300,7 @@ class WP_AI_Workflows_Platform_Client {
 	public static function mark_disconnected( $reason = 'manual' ) {
 		delete_option( self::OPTION_API_KEY );
 		delete_option( self::OPTION_CONNECTION );
-		// Site key is gone — drop every WP user's management JWT (cross-user purge)
+		// Site key is gone - drop every WP user's management JWT (cross-user purge)
 		// plus any legacy transient.
 		delete_metadata( 'user', 0, self::USERMETA_JWT, '', true );
 		delete_transient( self::TRANSIENT_JWT );
@@ -309,7 +309,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Credential storage (encrypted site key + metadata; per-user management JWT) — task 1.2
+	 * Credential storage (encrypted site key + metadata; per-user management JWT) - task 1.2
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -508,7 +508,7 @@ class WP_AI_Workflows_Platform_Client {
 		$user_id = get_current_user_id();
 		if ( $user_id > 0 ) {
 			delete_user_meta( $user_id, self::USERMETA_JWT );
-			// A management surface may only be managed under a live session — drop this
+			// A management surface may only be managed under a live session - drop this
 			// user's cached white-label gate decision along with the session.
 			delete_transient( self::TRANSIENT_WL_GATE . '_' . $user_id );
 		}
@@ -722,13 +722,13 @@ class WP_AI_Workflows_Platform_Client {
 		$text = (string) $text;
 		$text = preg_replace( '/wpaw_[A-Za-z0-9]+/', 'wpaw_[REDACTED]', $text );
 		$text = preg_replace( '/[Bb]earer\s+[A-Za-z0-9._\-]+/', 'Bearer [REDACTED]', $text );
-		// Bare JWTs (header.payload.signature — all start with the base64 of {"alg").
+		// Bare JWTs (header.payload.signature - all start with the base64 of {"alg").
 		$text = preg_replace( '/eyJ[A-Za-z0-9._\-]+/', '[JWT_REDACTED]', $text );
 		return $text;
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * HTTP core + error taxonomy — task 1.1
+	 * HTTP core + error taxonomy - task 1.1
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -761,7 +761,7 @@ class WP_AI_Workflows_Platform_Client {
 		// cloud execute, PDF render) where a 401 is a definitive "this key is revoked"
 		// signal. BACKGROUND reads (credits status, legacy-license auto-redeem, PDF
 		// template list / preview, execution polling) must NEVER tear down the
-		// connection on a transient or non-critical 401 — doing so turned a mere
+		// connection on a transient or non-critical 401 - doing so turned a mere
 		// background blip (e.g. the post-connect auto-redeem hitting a 401) into a full
 		// "logged out / no credits" state that returned on every screen navigation.
 		$disconnect_on_auth_fail = ! empty( $opts['disconnect_on_auth_fail'] );
@@ -823,7 +823,7 @@ class WP_AI_Workflows_Platform_Client {
 			$raw  = wp_remote_retrieve_body( $response );
 			$body = json_decode( $raw, true );
 
-			// Retry idempotent server errors (not 502 — a real upstream provider signal).
+			// Retry idempotent server errors (not 502 - a real upstream provider signal).
 			if ( $code >= 500 && 502 !== $code && $attempt < $retries ) {
 				++$attempt;
 				sleep( min( $backoff * $attempt, 10 ) );
@@ -906,12 +906,18 @@ class WP_AI_Workflows_Platform_Client {
 				}
 				return new WP_Error( 'platform_forbidden', 'Your account does not have permission for this operation.', array( 'status' => 403 ) );
 
+			case 409:
+				if ( 'SITE_LIMIT_REACHED' === $error_code ) {
+					return self::site_limit_error( $body );
+				}
+				break;
+
 			case 429:
 				$retry_after = (int) wp_remote_retrieve_header( $response, 'retry-after' );
 				return new WP_Error( 'platform_rate_limited', 'The platform is rate limiting requests. Please retry shortly.', array( 'status' => 429, 'retry_after' => $retry_after ) );
 
 			case 502:
-				return new WP_Error( 'platform_provider', 'The upstream AI provider failed — you were not charged.', array( 'status' => 502 ) );
+				return new WP_Error( 'platform_provider', 'The upstream AI provider failed. You were not charged.', array( 'status' => 502 ) );
 		}
 
 		// Any other non-2xx (400 validation, unexpected 5xx, malformed body).
@@ -933,6 +939,47 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/**
+	 * Build the typed error the connect UI turns into the "move or upgrade" dialog.
+	 *
+	 * @param mixed $body Decoded response body.
+	 * @return WP_Error
+	 */
+	private static function site_limit_error( $body ) {
+		$data  = is_array( $body ) && isset( $body['data'] ) && is_array( $body['data'] ) ? $body['data'] : array();
+		$sites = array();
+
+		if ( isset( $data['sites'] ) && is_array( $data['sites'] ) ) {
+			foreach ( $data['sites'] as $site ) {
+				if ( ! is_array( $site ) || empty( $site['id'] ) ) {
+					continue;
+				}
+				$sites[] = array(
+					'id'         => sanitize_text_field( (string) $site['id'] ),
+					'name'       => isset( $site['name'] ) ? sanitize_text_field( (string) $site['name'] ) : '',
+					'url'        => isset( $site['url'] ) ? esc_url_raw( (string) $site['url'] ) : '',
+					'lastPingAt' => isset( $site['lastPingAt'] ) ? sanitize_text_field( (string) $site['lastPingAt'] ) : '',
+				);
+			}
+		}
+
+		$message = is_array( $body ) && ! empty( $body['error'] )
+			? sanitize_text_field( (string) $body['error'] )
+			: 'Your plan has no free production site left.';
+
+		return new WP_Error(
+			'site_limit_reached',
+			$message,
+			array(
+				'status'     => 409,
+				'siteLimit'  => isset( $data['siteLimit'] ) ? (int) $data['siteLimit'] : 1,
+				'plan'       => isset( $data['plan'] ) ? sanitize_text_field( (string) $data['plan'] ) : '',
+				'sites'      => $sites,
+				'upgradeUrl' => isset( $data['upgradeUrl'] ) ? esc_url_raw( (string) $data['upgradeUrl'] ) : '',
+			)
+		);
+	}
+
+	/**
 	 * Drop the short-lived credits cache (after any metered call / on 402).
 	 */
 	public static function invalidate_credits_cache() {
@@ -941,7 +988,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Write the credits balance through the cache from a proxy `balanceAfter`
-	 * (R5.6) — keeps the meter fresh without an extra status call.
+	 * (R5.6) - keeps the meter fresh without an extra status call.
 	 *
 	 * @param float $balance_after
 	 * @return void
@@ -957,7 +1004,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Credits status (wpaw auth, 60s cache) — task 2.4
+	 * Credits status (wpaw auth, 60s cache) - task 2.4
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -1052,7 +1099,7 @@ class WP_AI_Workflows_Platform_Client {
 		$awarded = isset( $data['creditsAwarded'] ) ? (int) $data['creditsAwarded'] : 0;
 		$balance = isset( $data['balance'] ) ? (float) $data['balance'] : 0.0;
 
-		// A real (first-time) grant changed the balance — drop the cache so the
+		// A real (first-time) grant changed the balance - drop the cache so the
 		// meter refetches fresh. An idempotent replay left the balance untouched.
 		if ( ! $already && $awarded > 0 ) {
 			self::invalidate_credits_cache();
@@ -1067,7 +1114,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Usage Center — credits ledger history + daily consumption (wpaw auth)
+	 * Usage Center - credits ledger history + daily consumption (wpaw auth)
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -1145,7 +1192,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Apps / Pipedream Connect (wpaw auth) — thin server-side proxies onto the
+	 * Apps / Pipedream Connect (wpaw auth) - thin server-side proxies onto the
 	 * platform's /api/v1/mcp/* surface for the "Apps / Connect an App" node.
 	 * Builder-time only; none are metered or may disconnect on a transient 401.
 	 * ------------------------------------------------------------------------- */
@@ -1237,7 +1284,7 @@ class WP_AI_Workflows_Platform_Client {
 	 * response) and posts them here. The platform validates the key against the service,
 	 * stores it in its auth vault (never in WordPress), and mirrors the connection.
 	 *
-	 * SECURITY: field VALUES are credentials — passed straight through, never logged.
+	 * SECURITY: field VALUES are credentials - passed straight through, never logged.
 	 *
 	 * @param string $app_slug Toolkit slug to connect.
 	 * @param array  $fields   Map of field name => value (as declared by apps_connect).
@@ -1346,7 +1393,7 @@ class WP_AI_Workflows_Platform_Client {
 		}
 		// Cast to object so an EMPTY set encodes as JSON `{}` (a PHP empty array would
 		// encode as `[]`, which the platform's `configuredProps: {type:object}` schema
-		// rejects with a 400/500 — the cause of the initial dropdown-load failure).
+		// rejects with a 400/500 - the cause of the initial dropdown-load failure).
 		$props = is_array( $configured_props ) ? $configured_props : array();
 		$body  = array( 'configuredProps' => (object) $props );
 		if ( '' !== (string) $query ) {
@@ -1397,7 +1444,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/**
-	 * RUN a Connect-an-App action — the metered runtime call. Reserves + settles
+	 * RUN a Connect-an-App action - the metered runtime call. Reserves + settles
 	 * credit against the org resolved server-side from this site's key. A
 	 * definitive 401 disconnects the site; never retried (a retry could double-run
 	 * the action).
@@ -1436,7 +1483,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * App-event TRIGGERS (wpaw auth) — a workflow trigger bound to a Pipedream
+	 * App-event TRIGGERS (wpaw auth) - a workflow trigger bound to a Pipedream
 	 * event source; the platform deploys it and POSTs a signed inbound webhook
 	 * when the event fires.
 	 * ------------------------------------------------------------------------- */
@@ -1589,7 +1636,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Sanitize an opaque id (workflow id / deployed-trigger id): letters, digits,
-	 * underscore and hyphen only — covers UUIDs and Pipedream ids like "dc_abc123".
+	 * underscore and hyphen only - covers UUIDs and Pipedream ids like "dc_abc123".
 	 */
 	private static function sanitize_id( $id ) {
 		return preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $id );
@@ -1604,7 +1651,7 @@ class WP_AI_Workflows_Platform_Client {
 	 *   - an opaque, MIXED-CASE app id, e.g. "app_M0hv7G"
 	 *
 	 * Case MUST be preserved: Pipedream app ids are case-sensitive, and lowercasing
-	 * them ("app_m0hv7g") makes every downstream lookup 404 — which is what made
+	 * them ("app_m0hv7g") makes every downstream lookup 404 - which is what made
 	 * "+ Add app" hand a dead id to Connect Link and render "App not found."
 	 * The character allowlist is unchanged, so this stays safe for path use (and
 	 * callers rawurlencode it regardless).
@@ -1630,7 +1677,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Cloud execution (wpaw auth) — task 2.7
+	 * Cloud execution (wpaw auth) - task 2.7
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -1658,7 +1705,7 @@ class WP_AI_Workflows_Platform_Client {
 		// Pre-flight: a definition with wpAction nodes (post/save_output callbacks)
 		// can only succeed if the cloud can reach this site. Block at submit time
 		// with a clear message instead of burning credits on a socket error later.
-		// Filterable for tunneled dev setups — see callback_preflight_error().
+		// Filterable for tunneled dev setups - see callback_preflight_error().
 		$has_wp_action = false;
 		foreach ( $translated['definition']['nodes'] as $translated_node ) {
 			if ( isset( $translated_node['type'] ) && 'wpAction' === $translated_node['type'] ) {
@@ -1748,12 +1795,12 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Metered AI proxy (wpaw auth) — task 3.2
+	 * Metered AI proxy (wpaw auth) - task 3.2
 	 * ------------------------------------------------------------------------- */
 
 	/**
 	 * Route a single AI completion through the metered platform proxy. Never adds
-	 * a provider API key — BYOK stays local-only. No automatic retry, except one
+	 * a provider API key - BYOK stays local-only. No automatic retry, except one
 	 * bounded retry on 429 honouring Retry-After. No fallback to BYOK on failure;
 	 * failures surface as typed, non-charged WP_Errors.
 	 *
@@ -1818,7 +1865,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * PDF render service (wpaw auth) — Generate PDF node
+	 * PDF render service (wpaw auth) - Generate PDF node
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -1904,7 +1951,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Render a free preview image (PNG data URL) of a template or custom HTML.
-	 * Unlike render_pdf() this is never metered — lets the user preview before
+	 * Unlike render_pdf() this is never metered - lets the user preview before
 	 * spending a credit. No provider key rides along; nothing is charged.
 	 *
 	 * @param array $body {template:<id|"custom">, data?:{}, html?:<custom>, options?:{landscape,width}}.
@@ -1942,12 +1989,12 @@ class WP_AI_Workflows_Platform_Client {
 			return new WP_Error( 'platform_invalid_response', 'The PDF preview service returned an unexpected response.', array( 'status' => 502 ) );
 		}
 
-		// Preview is free — DO NOT touch the credits cache.
+		// Preview is free - DO NOT touch the credits cache.
 		return $data;
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Billing — Paddle overlay checkout, config, subscription, portal
+	 * Billing - Paddle overlay checkout, config, subscription, portal
 	 * See docs/BILLING-BACKEND-CONTRACT.md for the exact backend contract.
 	 * ------------------------------------------------------------------------- */
 
@@ -1971,7 +2018,7 @@ class WP_AI_Workflows_Platform_Client {
 		}
 
 		// Billing endpoint is org-scoped: send the connected org id, mirroring other
-		// org-scoped calls. '' when disconnected — the JWT-authed UI already gates this.
+		// org-scoped calls. '' when disconnected - the JWT-authed UI already gates this.
 		$meta   = self::get_connection_meta();
 		$org_id = isset( $meta['orgId'] ) ? (string) $meta['orgId'] : '';
 
@@ -2006,7 +2053,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Fetch the connected organization's current subscription summary for display
-	 * (plan name, status, cycle). Best-effort — a failure surfaces as a WP_Error the
+	 * (plan name, status, cycle). Best-effort - a failure surfaces as a WP_Error the
 	 * UI degrades gracefully around (it still shows credit packs). wpaw-authed.
 	 *
 	 * @return array{plan:string,status:string,cycle:string,renewsAt:string}|WP_Error
@@ -2016,7 +2063,7 @@ class WP_AI_Workflows_Platform_Client {
 			return new WP_Error( 'platform_disconnected', 'This site is not connected.', array( 'status' => 400 ) );
 		}
 
-		// JWT-only, org-scoped read — the wpaw_ site key is not accepted here (would
+		// JWT-only, org-scoped read - the wpaw_ site key is not accepted here (would
 		// misfire the invalid-key disconnect path). Best-effort: an expired JWT
 		// returns platform_auth_jwt without purging the connection.
 		$meta   = self::get_connection_meta();
@@ -2076,7 +2123,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Legacy license redemption (JWT/wpaw auth) — task 5.5
+	 * Legacy license redemption (JWT/wpaw auth) - task 5.5
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -2118,20 +2165,20 @@ class WP_AI_Workflows_Platform_Client {
 		if ( is_wp_error( $result ) ) {
 			$data   = $result->get_error_data();
 			$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
-			// Definitive redemption verdicts arrive as HTTP errors — fold them into the
+			// Definitive redemption verdicts arrive as HTTP errors - fold them into the
 			// normalised shape so callers treat them as final (never retried).
 			if ( 404 === $status ) {
 				return self::normalize_redeem_definitive( 'invalid' );
 			}
 			if ( 409 === $status ) {
-				// Already redeemed elsewhere — just refresh the (already-correct) meter.
+				// Already redeemed elsewhere - just refresh the (already-correct) meter.
 				self::invalidate_credits_cache();
 				return self::normalize_redeem_definitive( 'already' );
 			}
 			if ( 422 === $status ) {
 				return self::normalize_redeem_definitive( 'not_redeemable' );
 			}
-			// Transient / auth / unexpected — let the caller decide to retry.
+			// Transient / auth / unexpected - let the caller decide to retry.
 			return $result;
 		}
 
@@ -2159,7 +2206,7 @@ class WP_AI_Workflows_Platform_Client {
 
 		$is_grant = ( 'monthly' === $mechanism || 'goodwill' === $mechanism );
 		if ( $is_grant ) {
-			// A grant changed the balance — drop the cache so the meter refetches fresh.
+			// A grant changed the balance - drop the cache so the meter refetches fresh.
 			self::invalidate_credits_cache();
 		}
 
@@ -2197,7 +2244,7 @@ class WP_AI_Workflows_Platform_Client {
 	 * Automatic legacy-key redemption on connect. A site upgrading from 1.x has
 	 * its old SLM key in OPTION_LEGACY_KEY; on connect we auto-redeem it so an
 	 * existing customer's credits/plan appear without typing anything. Never
-	 * blocks the connect flow — queued via cron.
+	 * blocks the connect flow - queued via cron.
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -2224,19 +2271,19 @@ class WP_AI_Workflows_Platform_Client {
 	 * Queue the automatic legacy redemption after a successful connect. Fire-and-forget:
 	 * marks the attempt pending and schedules an off-request cron run so connecting is
 	 * never delayed. No-ops when there is no stored key, or when a DEFINITIVE result is
-	 * already recorded (idempotency — a reconnect never re-redeems).
+	 * already recorded (idempotency - a reconnect never re-redeems).
 	 *
 	 * @return void
 	 */
 	private static function maybe_queue_legacy_auto_redeem() {
 		$key = self::get_legacy_license_key();
 		if ( '' === $key ) {
-			return; // Fresh install / no legacy key — nothing to redeem.
+			return; // Fresh install / no legacy key - nothing to redeem.
 		}
 		$record = self::get_legacy_redeem_result();
 		$state  = isset( $record['state'] ) ? (string) $record['state'] : '';
 		if ( 'done' === $state || 'exhausted' === $state ) {
-			return; // Already settled once — never auto-attempt again.
+			return; // Already settled once - never auto-attempt again.
 		}
 
 		update_option(
@@ -2252,7 +2299,7 @@ class WP_AI_Workflows_Platform_Client {
 
 	/**
 	 * Perform the queued legacy redemption and record its result. Safe to call from
-	 * both the cron event and inline from the status endpoint — a transient lock
+	 * both the cron event and inline from the status endpoint - a transient lock
 	 * plus a settled-state guard mean it runs at most once.
 	 *
 	 * @return array The (possibly updated) auto-redeem record.
@@ -2261,10 +2308,10 @@ class WP_AI_Workflows_Platform_Client {
 		$record = self::get_legacy_redeem_result();
 		$state  = isset( $record['state'] ) ? (string) $record['state'] : '';
 		if ( 'done' === $state || 'exhausted' === $state ) {
-			return $record; // Already settled — nothing to do.
+			return $record; // Already settled - nothing to do.
 		}
 		if ( ! self::is_connected() ) {
-			// Disconnected mid-flow — leave pending; a later connect/poll retries.
+			// Disconnected mid-flow - leave pending; a later connect/poll retries.
 			WP_AI_Workflows_Utilities::debug_log( 'Legacy auto-redeem skipped: site not connected.', 'info' );
 			return $record;
 		}
@@ -2282,7 +2329,7 @@ class WP_AI_Workflows_Platform_Client {
 		$result = self::redeem_license( $key );
 
 		if ( is_wp_error( $result ) ) {
-			// Transient (503/429/401/network) — keep the record pending for a retry.
+			// Transient (503/429/401/network) - keep the record pending for a retry.
 			WP_AI_Workflows_Utilities::debug_log(
 				self::redact( 'Legacy auto-redeem transient failure: ' . $result->get_error_code() ),
 				'warning'
@@ -2304,7 +2351,7 @@ class WP_AI_Workflows_Platform_Client {
 			);
 			WP_AI_Workflows_Utilities::debug_log( 'Legacy auto-redeem granted (' . $outcome . ').', 'info' );
 		} else {
-			// invalid (404) / already (409) / not_redeemable (422) / pending — stay quiet.
+			// invalid (404) / already (409) / not_redeemable (422) / pending - stay quiet.
 			$record = array(
 				'state'       => 'exhausted',
 				'outcome'     => $outcome,
@@ -2318,7 +2365,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/* ---------------------------------------------------------------------------
-	 * Connection lifecycle (JWT auth) — task 1.3
+	 * Connection lifecycle (JWT auth) - task 1.3
 	 * ------------------------------------------------------------------------- */
 
 	/**
@@ -2343,7 +2390,7 @@ class WP_AI_Workflows_Platform_Client {
 	}
 
 	/**
-	 * Create a platform account from inside the plugin (headless — users never
+	 * Create a platform account from inside the plugin (headless - users never
 	 * visit the dashboard) and connect the resulting session. Returns the org
 	 * list, ready for register_site().
 	 *
@@ -2545,7 +2592,7 @@ class WP_AI_Workflows_Platform_Client {
 	 * Adopt a platform JWT obtained via the "Continue with Google" OAuth popup
 	 * (backend hands the token to the browser via postMessage). The Google-sign-in
 	 * analogue of login(): stores the JWT and returns the org list. The token is
-	 * validated by using it — a failing GET /organizations clears the session so
+	 * validated by using it - a failing GET /organizations clears the session so
 	 * the UI re-prompts.
 	 *
 	 * @param string $token Raw platform JWT (header.payload.signature).
@@ -2556,7 +2603,7 @@ class WP_AI_Workflows_Platform_Client {
 		if ( '' === $token ) {
 			return new WP_Error( 'invalid_input', 'A session token is required.', array( 'status' => 400 ) );
 		}
-		// Structural guard only, not verification — a JWT is three base64url segments;
+		// Structural guard only, not verification - a JWT is three base64url segments;
 		// the platform itself rejects a forged/expired token on the call below.
 		if ( ! preg_match( '/^[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+$/', $token ) ) {
 			return new WP_Error( 'invalid_input', 'The sign-in token was malformed. Please try again.', array( 'status' => 400 ) );
@@ -2575,7 +2622,7 @@ class WP_AI_Workflows_Platform_Client {
 			)
 		);
 		if ( is_wp_error( $named ) ) {
-			// A bad/expired token is not a usable session — drop it so the UI re-prompts.
+			// A bad/expired token is not a usable session - drop it so the UI re-prompts.
 			self::clear_jwt();
 			return $named;
 		}
@@ -2611,14 +2658,25 @@ class WP_AI_Workflows_Platform_Client {
 	 * Register this WordPress site with the selected organization and persist the
 	 * issued `wpaw_` key encrypted (R1.3, R1.4).
 	 *
-	 * @param string $org_id   Organization id (sent as x-organization-id).
-	 * @param string $org_name Human-readable org name for display (optional).
+	 * @param string $org_id          Organization id (sent as x-organization-id).
+	 * @param string $org_name        Human-readable org name for display (optional).
+	 * @param string $replace_site_id Site to move the account off, freeing its plan slot.
 	 * @return array|WP_Error Non-secret connection metadata on success.
 	 */
-	public static function register_site( $org_id, $org_name = '' ) {
+	public static function register_site( $org_id, $org_name = '', $replace_site_id = '' ) {
 		$org_id = sanitize_text_field( $org_id );
 		if ( '' === $org_id ) {
 			return new WP_Error( 'platform_error', 'An organization must be selected before registering this site.', array( 'status' => 400 ) );
+		}
+
+		$body = array(
+			'siteUrl'  => home_url(),
+			'siteName' => get_bloginfo( 'name' ),
+		);
+
+		$replace_site_id = sanitize_text_field( (string) $replace_site_id );
+		if ( '' !== $replace_site_id ) {
+			$body['replaceSiteId'] = $replace_site_id;
 		}
 
 		$result = self::request(
@@ -2628,10 +2686,7 @@ class WP_AI_Workflows_Platform_Client {
 				'auth'    => 'jwt',
 				'org_id'  => $org_id,
 				'timeout' => 15,
-				'body'    => array(
-					'siteUrl'  => home_url(),
-					'siteName' => get_bloginfo( 'name' ),
-				),
+				'body'    => $body,
 				'context' => 'register_site',
 			)
 		);
@@ -2646,7 +2701,7 @@ class WP_AI_Workflows_Platform_Client {
 
 		$stored = self::store_key( $data['apiKey'] );
 		if ( is_wp_error( $stored ) ) {
-			// Encryption unavailable — never fall back to plaintext (R1.8).
+			// Encryption unavailable - never fall back to plaintext (R1.8).
 			return $stored;
 		}
 
@@ -2655,7 +2710,7 @@ class WP_AI_Workflows_Platform_Client {
 		self::store_connection( $meta );
 		self::invalidate_credits_cache();
 
-		// v2.0 migration: the site is now connected — auto-redeem any stored 1.x SLM key
+		// v2.0 migration: the site is now connected - auto-redeem any stored 1.x SLM key
 		// so an existing customer's credits/plan appear without typing anything. Queued
 		// fire-and-forget; it never blocks or fails this connect.
 		self::maybe_queue_legacy_auto_redeem();
@@ -2730,7 +2785,7 @@ class WP_AI_Workflows_Platform_Client {
 			)
 		);
 
-		// A 401 (revoked/expired) is still a definitive "gone" — purge locally.
+		// A 401 (revoked/expired) is still a definitive "gone" - purge locally.
 		if ( is_wp_error( $result ) ) {
 			$err = $result->get_error_code();
 			if ( 'platform_auth' === $err || 'platform_auth_jwt' === $err ) {
@@ -2817,7 +2872,7 @@ class WP_AI_Workflows_Platform_Client {
 		}
 
 		if ( 401 === $code ) {
-			// Expired human session — drop this user's management JWT so the UI
+			// Expired human session - drop this user's management JWT so the UI
 			// re-prompts login, but do NOT purge the site key/connection (this is not
 			// an invalid-key signal).
 			self::clear_jwt();
@@ -2933,7 +2988,7 @@ class WP_AI_Workflows_Platform_Client {
 	/**
 	 * Pre-provision / register a new site under the org and issue its key ONCE
 	 * (owner-only; enforces the plan site limit). The returned `apiKey` is plaintext
-	 * shown exactly once — the caller surfaces it to the owner and never stores it.
+	 * shown exactly once - the caller surfaces it to the owner and never stores it.
 	 *
 	 * @param string $site_url  The new site's URL (identity + display seed).
 	 * @param string $site_name Optional friendly name.
@@ -2975,6 +3030,8 @@ class WP_AI_Workflows_Platform_Client {
 			'orgId'       => sanitize_text_field( $org_id ),
 			'orgName'     => isset( $existing['orgName'] ) && '' !== $existing['orgName'] ? $existing['orgName'] : sanitize_text_field( $org_id ),
 			'connectedAt' => isset( $existing['connectedAt'] ) && '' !== $existing['connectedAt'] ? $existing['connectedAt'] : current_time( 'mysql' ),
+			// Development sites do not count toward the plan's site limit.
+			'isDevelopment' => isset( $data['isDevelopment'] ) ? (bool) $data['isDevelopment'] : ! empty( $existing['isDevelopment'] ),
 		);
 	}
 }

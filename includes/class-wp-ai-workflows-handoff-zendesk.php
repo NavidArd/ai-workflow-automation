@@ -1,6 +1,6 @@
 <?php
 /**
- * Zendesk Sunshine Conversations Handoff Provider — Switchboard passControl.
+ * Zendesk Sunshine Conversations Handoff Provider - Switchboard passControl.
  *
  * Outbound: ensures a Sunshine user + conversation, posts the transcript as a
  * business message, then passes control to the configured human switchboard
@@ -309,7 +309,7 @@ class WP_AI_Workflows_Handoff_Zendesk implements WP_AI_Workflows_Handoff_Provide
 				}
 			}
 			if ( $cust ) {
-				$lines[] = 'Customer — ' . implode( ', ', $cust );
+				$lines[] = 'Customer: ' . implode( ', ', $cust );
 			}
 		}
 

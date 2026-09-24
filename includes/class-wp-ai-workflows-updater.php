@@ -41,7 +41,7 @@ class WP_AI_Workflows_Updater {
 			return $cached_result;
 		}
 
-		// Phase 3 (R6.3): the update check is UNAUTHENTICATED — no SLM key/secret
+		// Phase 3 (R6.3): the update check is UNAUTHENTICATED - no SLM key/secret
 		// params are ever sent. When the site is connected, the platform site key
 		// MAY be attached as a bearer header for download-entitlement only; it never
 		// gates the metadata check itself (a disconnected free build still updates).

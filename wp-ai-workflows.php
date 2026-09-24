@@ -3,7 +3,7 @@
  * Plugin Name: AI Workflow Automation
  * Plugin URI: https://wpaiworkflowautomation.com
  * Description: A WordPress plugin for building complex AI-powered workflows and AI agents with a visual interface.
- * Version: 2.0.7
+ * Version: 2.0.8
  * Requires at least: 6.2.0
  * Requires PHP: 8.0.0
  * Author: Massive Shift
@@ -19,18 +19,18 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-// Firebase JWT class aliases. Declared here at file scope — OUTSIDE the
-// compile-safety wrapper further down — because `use` imports may not appear
+// Firebase JWT class aliases. Declared here at file scope - OUTSIDE the
+// compile-safety wrapper further down - because `use` imports may not appear
 // inside a conditional block.
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 /*
- * Duplicate-copy / legacy-clash guard — must run before any class include.
+ * Duplicate-copy / legacy-clash guard - must run before any class include.
  *
  * v2.0 replaces two legacy plugins that declare the same WP_AI_Workflows_*
- * classes/functions with no redeclaration guards. If a legacy copy — or a
- * second copy of this plugin — is already loaded this request, requiring our
+ * classes/functions with no redeclaration guards. If a legacy copy - or a
+ * second copy of this plugin - is already loaded this request, requiring our
  * classes would fatal with "Cannot redeclare class/function". WP_AI_WORKFLOWS_LOADED,
  * function_exists( 'wp_ai_workflows_handle_error' ), and class_exists( 'WP_AI_Workflows_Utilities' )
  * detect that before this file declares anything of its own; on a hit we bail
@@ -88,7 +88,7 @@ spl_autoload_register(
 );
 
 
-define( 'WP_AI_WORKFLOWS_PRO_VERSION', '2.0.7' );
+define( 'WP_AI_WORKFLOWS_PRO_VERSION', '2.0.8' );
 define( 'WP_AI_WORKFLOWS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_AI_WORKFLOWS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WP_AI_WORKFLOWS_PLUGIN_FILE', __FILE__ );
@@ -113,6 +113,7 @@ $required_files = array(
 	'workflow',
 	'workflow-dbal',
 	'node-execution',
+	'post-fields',
 	'node-catalog',
 	'workflow-validator',
 	'platform-client',
@@ -463,7 +464,7 @@ function run_wp_ai_workflows() {
 		WP_AI_Workflows_Platform_Client::init();
 
 		// Phase 3 (R6.1/R6.5): free-first. The plugin ALWAYS initializes full
-		// functionality — the SLM license no longer gates the plugin, and no
+		// functionality - the SLM license no longer gates the plugin, and no
 		// license phone-home runs on load (wp.org Guideline 6). Premium/Cloud
 		// features gate on platform connection state, not a license. The license
 		// classes remain as a dormant fallback but are not consulted here.
@@ -535,7 +536,7 @@ function initialize_full_functionality( $license ) {
 		new WP_AI_Workflows_Generator();
 		new WP_AI_Workflows_Vector_Store();
 
-		// Phase 3 (R6.5): no license nag — the plugin is free. $license is retained
+		// Phase 3 (R6.5): no license nag - the plugin is free. $license is retained
 		// in the signature only for backward compatibility with the dormant classes.
 		unset( $license );
 

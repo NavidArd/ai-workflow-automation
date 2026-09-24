@@ -4,7 +4,7 @@
  *
  * Wraps the Firecrawl v2 REST API (https://docs.firecrawl.dev/api-reference/v2-introduction).
  * Every request is authenticated with `Authorization: Bearer <key>` and is sent ONLY to the
- * fixed Firecrawl API host — the user-supplied target URL / query is passed as a request-body
+ * fixed Firecrawl API host - the user-supplied target URL / query is passed as a request-body
  * parameter for Firecrawl to fetch, never used as the request endpoint (SSRF-safe: this plugin
  * never dereferences an arbitrary user URL server-side).
  *
@@ -343,7 +343,7 @@ class WP_AI_Workflows_Firecrawl {
 
 		$lines = array();
 		foreach ( $results as $r ) {
-			$lines[] = trim( ( $r['title'] ? $r['title'] . ' — ' : '' ) . $r['url'] . ( $r['description'] ? "\n" . $r['description'] : '' ) );
+			$lines[] = trim( ( $r['title'] ? $r['title'] . ': ' : '' ) . $r['url'] . ( $r['description'] ? "\n" . $r['description'] : '' ) );
 		}
 
 		return array(
@@ -357,7 +357,7 @@ class WP_AI_Workflows_Firecrawl {
 	}
 
 	/**
-	 * Agent extraction — the v2 replacement for the deprecated /extract endpoint.
+	 * Agent extraction - the v2 replacement for the deprecated /extract endpoint.
 	 * Structured extraction from a prompt (+ optional schema and/or seed URLs).
 	 *
 	 * @param array $params { prompt, schema (JSON-schema array), urls[] }
@@ -553,7 +553,7 @@ class WP_AI_Workflows_Firecrawl {
 	/**
 	 * Validate and normalize a user-supplied target URL (the thing Firecrawl will
 	 * fetch). Only http/https are allowed. This value is a request-body parameter,
-	 * never an endpoint, so it is not an SSRF vector — this is defence-in-depth / UX.
+	 * never an endpoint, so it is not an SSRF vector - this is defence-in-depth / UX.
 	 *
 	 * @param string $url
 	 * @return string|WP_Error

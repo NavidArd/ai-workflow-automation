@@ -1,12 +1,12 @@
 <?php
 /**
- * Intercom Handoff Provider — create a conversation and assign to a teammate/team.
+ * Intercom Handoff Provider - create a conversation and assign to a teammate/team.
  *
  * Agent mode Phase 2b. Outbound: ensure an Intercom contact (role=user) for the
  * chat session, open a conversation carrying the transcript + agent summary, then
  * assign it to the configured teammate or team so a human takes over. Subsequent
  * visitor messages are relayed as user replies on the conversation. Inbound: an
- * Intercom `conversation.admin.replied` webhook — the admin's (human) reply — is
+ * Intercom `conversation.admin.replied` webhook - the admin's (human) reply - is
  * relayed to the visitor. Resolve (end_handoff) closes the conversation.
  *
  * All Intercom HTTP goes through {@see self::request()} (wp_remote_*), so it is
@@ -18,7 +18,7 @@
  * with the client secret. Fail-closed: with no configured secret, or no valid
  * proof, the webhook is rejected.
  *
- * API reference: Intercom REST API — Contacts, Conversations (create / reply /
+ * API reference: Intercom REST API - Contacts, Conversations (create / reply /
  * parts assignment + close), base https://api.intercom.io (EU
  * https://api.eu.intercom.io, AU https://api.au.intercom.io).
  *
@@ -324,7 +324,7 @@ class WP_AI_Workflows_Handoff_Intercom implements WP_AI_Workflows_Handoff_Provid
 				}
 			}
 			if ( $cust ) {
-				$lines[] = 'Customer — ' . implode( ', ', $cust );
+				$lines[] = 'Customer: ' . implode( ', ', $cust );
 			}
 		}
 
