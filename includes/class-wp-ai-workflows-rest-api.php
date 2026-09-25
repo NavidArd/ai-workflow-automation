@@ -35,6 +35,18 @@ class WP_AI_Workflows_REST_API {
 				'permission_callback' => array( $this, 'authorize_request' ),
 			)
 		);
+		// Where each node of a Cloud run would execute, computed server side so the
+		// builder never carries a second copy of the rule.
+		register_rest_route(
+			'wp-ai-workflows/v1',
+			'/workflows/execution-plan',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'get_execution_plan' ),
+				'permission_callback' => array( $this, 'authorize_request' ),
+			)
+		);
+
 
 		register_rest_route(
 			'wp-ai-workflows/v1',
@@ -2420,6 +2432,58 @@ class WP_AI_Workflows_REST_API {
 	}
 
 	/**
+	 * POST /workflows/execution-plan - where each node of this workflow would run
+	 * in Cloud mode, the cloud/site split, the credit estimate, and the only
+	 * reasons a Cloud run is still refused.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return WP_REST_Response
+	 */
+	public function get_execution_plan( $request ) {
+		$params = $request->get_json_params();
+		$nodes  = ( isset( $params['nodes'] ) && is_array( $params['nodes'] ) ) ? $params['nodes'] : array();
+		$edges  = ( isset( $params['edges'] ) && is_array( $params['edges'] ) ) ? $params['edges'] : array();
+
+		$plan = WP_AI_Workflows_Workflow_Translator::execution_plan( $nodes, $edges );
+
+		// A workflow with a step that needs this site can only run in Cloud when the
+		// cloud can reach the site back.
+		$reachable = true;
+		$preflight = WP_AI_Workflows_Platform_Client::callback_preflight_error();
+		if ( $preflight instanceof WP_Error ) {
+			$reachable = false;
+			if ( $plan['summary']['siteSteps'] > 0 ) {
+				$plan['refusals'][] = array(
+					'id'     => '',
+					'type'   => '',
+					'reason' => $preflight->get_error_message(),
+				);
+			}
+		}
+
+		$plan['summary']['siteReachable'] = $reachable;
+		$plan['summary']['canRunInCloud'] = empty( $plan['refusals'] );
+		$plan['summary']['creditsSource'] = 'site';
+
+		// The platform prices its own run. Ask it when this site is connected and
+		// the workflow could actually go, and keep the local arithmetic otherwise.
+		$want_credits = ! isset( $params['credits'] ) || false !== $params['credits'];
+		if ( $want_credits && empty( $plan['refusals'] ) && ! empty( $plan['nodes'] ) && WP_AI_Workflows_Platform_Client::is_connected() ) {
+			$translated = WP_AI_Workflows_Workflow_Translator::translate( array( 'nodes' => $nodes, 'edges' => $edges ) );
+			if ( is_array( $translated ) ) {
+				$estimate = WP_AI_Workflows_Platform_Client::estimate_workflow( $translated['definition'] );
+				if ( is_array( $estimate ) ) {
+					$plan['summary']['credits']       = (int) $estimate['estimatedCredits'];
+					$plan['summary']['creditsSource'] = 'platform';
+					$plan['summary']['line']          = WP_AI_Workflows_Workflow_Translator::summary_line( $plan['summary'] );
+				}
+			}
+		}
+
+		return new WP_REST_Response( $plan, 200 );
+	}
+
+	/**
 	 * Permission callback for all /platform/* admin routes.
 	 *
 	 * @return true|WP_Error
@@ -3570,6 +3634,12 @@ class WP_AI_Workflows_REST_API {
 				'creditsCharged' => isset( $step['creditsCharged'] ) && null !== $step['creditsCharged']
 					? (float) $step['creditsCharged']
 					: null,
+				'ranOn'          => isset( $step['ranOn'] ) ? sanitize_text_field( (string) $step['ranOn'] ) : '',
+				'locus'          => isset( $step['locus'] ) ? sanitize_text_field( (string) $step['locus'] ) : '',
+				'locusLabel'     => isset( $step['locusLabel'] ) ? sanitize_text_field( (string) $step['locusLabel'] ) : '',
+				'siteDurationMs' => isset( $step['siteDurationMs'] ) && null !== $step['siteDurationMs']
+					? (int) $step['siteDurationMs']
+					: null,
 			);
 		}
 
@@ -4138,15 +4208,20 @@ class WP_AI_Workflows_REST_API {
 			$provider = 'openrouter';
 		}
 
+		$headers = array(
+			'Authorization' => 'Bearer ' . $key,
+			'Accept'        => 'application/json',
+		);
+		if ( 'openrouter' === $provider ) {
+			$headers = array_merge( $headers, WP_AI_Workflows_Utilities::openrouter_headers() );
+		}
+
 		$response = wp_remote_get(
 			$endpoints[ $provider ],
 			array(
 				'timeout'     => 10,
 				'redirection' => 0,
-				'headers'     => array(
-					'Authorization' => 'Bearer ' . $key,
-					'Accept'        => 'application/json',
-				),
+				'headers'     => $headers,
 			)
 		);
 
@@ -4212,6 +4287,24 @@ class WP_AI_Workflows_REST_API {
 		}
 	}
 
+	/**
+	 * The human_tasks.status value an approve/reject/revert action resolves to.
+	 * Not simple verb + "ed": "approve" already ends in "e", so that would
+	 * produce "approveed", which the status enum silently drops to ''.
+	 *
+	 * @param string $action approve|reject|revert.
+	 * @return string
+	 */
+	private static function task_action_past_tense( $action ) {
+		$past_tense = array(
+			'approve' => 'approved',
+			'reject'  => 'rejected',
+			'revert'  => 'reverted',
+		);
+
+		return isset( $past_tense[ $action ] ) ? $past_tense[ $action ] : $action;
+	}
+
 	public function update_human_task( $request ) {
 			$task_id  = $request['id'];
 			$action   = $request['action'];
@@ -4261,8 +4354,8 @@ class WP_AI_Workflows_REST_API {
 			case 'approve':
 			case 'reject':
 			case 'revert':
-				$result = $human_tasks->update_task_status( $task_id, $action . 'ed', $user_id, $comments );
-				if ( $result ) {
+				$result = $human_tasks->update_task_status( $task_id, self::task_action_past_tense( $action ), $user_id, $comments );
+				if ( $result && ! WP_AI_Workflows_Site_Step::resolve_task( $task, $content, $action ) ) {
 					if ( $action === 'reject' ) {
 						WP_AI_Workflows_Workflow::complete_execution( $task['execution_id'], 'rejected' );
 					} else {
@@ -4272,7 +4365,7 @@ class WP_AI_Workflows_REST_API {
 				break;
 			case 'modify':
 				$result = $human_tasks->update_task_status( $task_id, 'modified', $user_id, $comments, $content );
-				if ( $result ) {
+				if ( $result && ! WP_AI_Workflows_Site_Step::resolve_task( $task, $content, 'modify' ) ) {
 					WP_AI_Workflows_Workflow::resume_execution( $task['execution_id'], $task['node_id'], $content, 'modify' );
 				}
 				break;
@@ -4494,7 +4587,7 @@ class WP_AI_Workflows_REST_API {
 		// If there's a mapping with input tags, indicate what it would contain
 		if ( ! empty( $mapping ) ) {
 			if ( strpos( $mapping, '[[' ) !== false || strpos( $mapping, '[Input from' ) !== false ) {
-				return 'Test data for: ' . strip_tags( $mapping );
+				return 'Test data for: ' . wp_strip_all_tags( $mapping );
 			}
 			return $mapping; // Static value
 		}
@@ -4681,7 +4774,7 @@ class WP_AI_Workflows_REST_API {
 							'url'           => $page['url'],
 							'content'       => $page['content'],
 							'contentLength' => strlen( $page['content'] ),
-							'timestamp'     => date( 'c' ),
+							'timestamp'     => gmdate( 'c' ),
 						);
 					},
 					$result['pages']
@@ -7709,11 +7802,11 @@ class WP_AI_Workflows_REST_API {
 			if ( ! $start_date || ! $end_date ) {
 				$end_date   = current_time( 'mysql' );
 				$start_date = match ( $timeframe ) {
-					'7days' => date( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
-					'30days' => date( 'Y-m-d H:i:s', strtotime( '-30 days' ) ),
-					'90days' => date( 'Y-m-d H:i:s', strtotime( '-90 days' ) ),
-					'year' => date( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
-					default => date( 'Y-m-d H:i:s', strtotime( '-30 days' ) )
+					'7days' => gmdate( 'Y-m-d H:i:s', strtotime( '-7 days' ) ),
+					'30days' => gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) ),
+					'90days' => gmdate( 'Y-m-d H:i:s', strtotime( '-90 days' ) ),
+					'year' => gmdate( 'Y-m-d H:i:s', strtotime( '-1 year' ) ),
+					default => gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) )
 				};
 			}
 
@@ -8434,7 +8527,7 @@ class WP_AI_Workflows_REST_API {
 			// Add server environment info
 			$server_software = 'Unknown';
 			if ( isset( $_SERVER['SERVER_SOFTWARE'] ) ) {
-				$server_software = esc_html( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) );
+				$server_software = sanitize_text_field( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) );
 			}
 			$response['environment'] = array(
 				'server'      => $server_software,
@@ -8535,7 +8628,7 @@ class WP_AI_Workflows_REST_API {
 		// Additional .htaccess check
 		$htaccess_path                     = ABSPATH . '.htaccess';
 		$test_results['htaccess_exists']   = file_exists( $htaccess_path );
-		$test_results['htaccess_writable'] = is_writable( $htaccess_path );
+		$test_results['htaccess_writable'] = wp_is_writable( $htaccess_path );
 
 		// Check if this site is behind a proxy/CDN
 		$test_results['behind_proxy'] = $this->detect_site_behind_proxy();
@@ -9495,8 +9588,9 @@ class WP_AI_Workflows_REST_API {
 			'https://openrouter.ai/api/v1/models',
 			array(
 				'timeout' => 15,
-				'headers' => array(
-					'Content-Type' => 'application/json',
+				'headers' => array_merge(
+					array( 'Content-Type' => 'application/json' ),
+					WP_AI_Workflows_Utilities::openrouter_headers()
 				),
 			)
 		);
@@ -10173,9 +10267,12 @@ class WP_AI_Workflows_REST_API {
 			$response = wp_remote_get(
 				'https://openrouter.ai/api/v1/credits',
 				array(
-					'headers' => array(
-						'Authorization' => 'Bearer ' . $api_key,
-						'Content-Type'  => 'application/json',
+					'headers' => array_merge(
+						array(
+							'Authorization' => 'Bearer ' . $api_key,
+							'Content-Type'  => 'application/json',
+						),
+						WP_AI_Workflows_Utilities::openrouter_headers()
 					),
 					'timeout' => 15,
 				)

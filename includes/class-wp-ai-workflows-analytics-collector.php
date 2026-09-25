@@ -63,7 +63,15 @@ class WP_AI_Workflows_Analytics_Collector {
 	}
 
 	public function register_settings() {
-		register_setting( 'wp_ai_workflows_settings', 'wp_ai_workflows_analytics_opt_in' );
+		register_setting(
+			'wp_ai_workflows_settings',
+			'wp_ai_workflows_analytics_opt_in',
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			)
+		);
 	}
 
 	private function is_analytics_enabled() {
@@ -135,12 +143,14 @@ class WP_AI_Workflows_Analytics_Collector {
 	}
 
 	private function build_payload( $event, $props ) {
+		$properties = self::filter_properties( $props );
 		return array(
 			'installation_id' => $this->installation_id(),
 			'event'           => (string) $event,
 			'timestamp'       => gmdate( 'c' ),
 			'plugin_version'  => $this->plugin_version,
-			'properties'      => self::filter_properties( $props ),
+			// PHP encodes an empty array as JSON `[]`; the backend requires an object.
+			'properties'      => empty( $properties ) ? new stdClass() : $properties,
 		);
 	}
 

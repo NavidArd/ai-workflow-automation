@@ -6,6 +6,8 @@
   "capabilities": ["document parsing", "PDF/office extraction", "table and column handling"],
   "modes": ["local"],
   "credits": 0,
+  "locus": "site",
+  "siteStepMode": "async",
   "config": [
     { "name": "inputType", "type": "enum", "required": true, "default": "link",
       "options": ["link", "upload"], "description": "Parse a document by URL or by uploaded file." },

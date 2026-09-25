@@ -219,7 +219,7 @@ class WP_AI_Workflows_Google_Service {
 
 	public function check_sheet_changes( $sheet_id, $tab_id, $trigger_type, $last_check_time ) {
 		try {
-			$last_check_time_rfc3339 = date( 'c', strtotime( $last_check_time ) );
+			$last_check_time_rfc3339 = gmdate( 'c', strtotime( $last_check_time ) );
 
 			$response = $this->make_request( $this->sheets_base_url . "/spreadsheets/$sheet_id/values/$tab_id?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING" );
 
@@ -458,7 +458,7 @@ class WP_AI_Workflows_Google_Service {
 	}
 
 	public function check_drive_changes( $watch_type, $item_id, $trigger_type, $last_check_time ) {
-		$last_check_time_rfc3339 = date( 'c', strtotime( $last_check_time ) );
+		$last_check_time_rfc3339 = gmdate( 'c', strtotime( $last_check_time ) );
 
 		$changes = array();
 

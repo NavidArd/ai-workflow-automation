@@ -6,6 +6,7 @@
   "capabilities": ["text-to-image", "image-to-video", "text-to-video", "text-to-audio", "AI media generation", "dynamic model catalog", "OpenAPI-driven fields"],
   "modes": ["local", "cloud"],
   "credits": 10,
+  "locus": "either",
   "config": [
     { "name": "selectedModel", "type": "string", "required": true, "description": "Fal.ai endpoint id (e.g. fal-ai/flux/schnell). Chosen from the live, searchable model catalog." },
     { "name": "modelGroup", "type": "enum", "required": false, "default": "image", "options": ["image", "video", "audio"], "description": "Coarse media type used to filter the picker and pick the result renderer." },

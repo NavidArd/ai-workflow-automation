@@ -123,42 +123,45 @@ class WP_AI_Workflows_Knowledge_Base {
 		$table = $cfg['table'];
 		$dim   = self::EMBEDDING_DIM;
 
-		return <<<SQL
--- Run once in the Supabase SQL editor.
-create extension if not exists vector;
-
-create table if not exists {$table} (
-    id         bigserial primary key,
-    kb_id      text not null,
-    content    text not null,
-    metadata   jsonb default '{}'::jsonb,
-    embedding  vector({$dim}),
-    created_at timestamptz default now()
-);
-
-create index if not exists {$table}_kb_id_idx on {$table} (kb_id);
-create index if not exists {$table}_embedding_idx
-    on {$table} using ivfflat (embedding vector_cosine_ops) with (lists = 100);
-
-create or replace function match_documents(
-    query_embedding vector({$dim}),
-    match_count int default 5,
-    filter_kb_id text default null
-) returns table (
-    id bigint,
-    kb_id text,
-    content text,
-    metadata jsonb,
-    similarity float
-) language sql stable as \$\$
-    select id, kb_id, content, metadata,
-           1 - (embedding <=> query_embedding) as similarity
-    from {$table}
-    where filter_kb_id is null or kb_id = filter_kb_id
-    order by embedding <=> query_embedding
-    limit match_count;
-\$\$;
-SQL;
+		return implode(
+			"\n",
+			array(
+				'-- Run once in the Supabase SQL editor.',
+				'create extension if not exists vector;',
+				'',
+				"create table if not exists {$table} (",
+				'    id         bigserial primary key,',
+				'    kb_id      text not null,',
+				'    content    text not null,',
+				"    metadata   jsonb default '{}'::jsonb,",
+				"    embedding  vector({$dim}),",
+				'    created_at timestamptz default now()',
+				');',
+				'',
+				"create index if not exists {$table}_kb_id_idx on {$table} (kb_id);",
+				"create index if not exists {$table}_embedding_idx",
+				"    on {$table} using ivfflat (embedding vector_cosine_ops) with (lists = 100);",
+				'',
+				'create or replace function match_documents(',
+				"    query_embedding vector({$dim}),",
+				'    match_count int default 5,',
+				'    filter_kb_id text default null',
+				') returns table (',
+				'    id bigint,',
+				'    kb_id text,',
+				'    content text,',
+				'    metadata jsonb,',
+				'    similarity float',
+				') language sql stable as $$',
+				'    select id, kb_id, content, metadata,',
+				'           1 - (embedding <=> query_embedding) as similarity',
+				"    from {$table}",
+				'    where filter_kb_id is null or kb_id = filter_kb_id',
+				'    order by embedding <=> query_embedding',
+				'    limit match_count;',
+				'$$;',
+			)
+		);
 	}
 
 	/* ---------------------------------------------------------------------
@@ -182,7 +185,7 @@ SQL;
 				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id)
-			) " . $charset_collate,
+			) " . $charset_collate, // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name is passed as %i; charset comes from $wpdb->get_charset_collate().
 			$this->kb_table
 		);
 

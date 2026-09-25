@@ -6,6 +6,7 @@
   "capabilities": ["conditional branching", "AND/OR groups", "string and numeric comparisons"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "cloud",
   "config": [
     { "name": "conditionGroups", "type": "array", "required": true,
       "description": "Array of groups: { type: AND|OR, conditions: [{ input, comparison (equals|contains|startsWith|endsWith|greaterThan|lessThan), value }] }. Inputs support variable tags." }

@@ -6,6 +6,7 @@
   "capabilities": ["online research", "web-grounded answers", "Perplexity Sonar"],
   "modes": ["local", "cloud"],
   "credits": 40,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "The research question or topic." },

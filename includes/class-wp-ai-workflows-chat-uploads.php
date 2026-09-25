@@ -10,7 +10,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -312,7 +312,7 @@ class WP_AI_Workflows_Chat_Uploads {
 			}
 			wp_delete_file( $moved['file'] );
 		}
-		@chmod( $dest, 0600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		@chmod( $dest, 0600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- tightens perms below the upload default on this private store
 
 		$is_image = in_array( $ext, self::image_exts(), true );
 		$meta     = array(

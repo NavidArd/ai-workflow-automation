@@ -10,7 +10,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -64,7 +64,7 @@ class WP_AI_Workflows_Agent_Approvals {
 		}
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, content, workflow_id, created_at FROM %i WHERE node_id = %s AND status = %s ORDER BY id DESC LIMIT %d",
+				"SELECT id, content, workflow_id, workflow_name, created_at FROM %i WHERE node_id = %s AND status = %s ORDER BY id DESC LIMIT %d",
 				$table,
 				self::NODE_ID,
 				'pending',
@@ -107,6 +107,7 @@ class WP_AI_Workflows_Agent_Approvals {
 				'type'         => 'approval',
 				'session_id'   => $session_id,
 				'workflow_id'  => isset( $r['workflow_id'] ) ? (string) $r['workflow_id'] : '',
+				'workflow_name' => isset( $r['workflow_name'] ) ? (string) $r['workflow_name'] : '',
 				'tool'         => $tool,
 				'tool_label'   => self::humanize_tool( $tool ),
 				'args'         => $args,

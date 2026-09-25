@@ -6,6 +6,8 @@
   "capabilities": ["file generation", "txt/docx/html output", "media library storage"],
   "modes": ["local"],
   "credits": 1,
+  "locus": "site",
+  "siteStepMode": "async",
   "config": [
     { "name": "fileName", "type": "string", "required": true, "supportsVariables": true, "description": "Name of the file to create." },
     { "name": "fileFormat", "type": "enum", "required": true, "default": "txt",

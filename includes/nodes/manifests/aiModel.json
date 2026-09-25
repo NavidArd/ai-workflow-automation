@@ -6,6 +6,7 @@
   "capabilities": ["text generation", "OpenAI/Anthropic/OpenRouter", "optional knowledgebase RAG", "web and file search tools", "vision"],
   "modes": ["local", "cloud"],
   "credits": 2,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "The prompt. Use [Input from node-id] / [[field] from node-id] tags to inject upstream data." },

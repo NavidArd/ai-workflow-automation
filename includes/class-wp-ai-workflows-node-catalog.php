@@ -14,7 +14,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_NODE_CATALOG_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -24,7 +24,7 @@ class WP_AI_Workflows_Node_Catalog {
 	 * Bumped when the manifest schema or the catalog serialization changes so
 	 * old transients are discarded even if manifest files are byte-identical.
 	 */
-	const VERSION = '1.1.0';
+	const VERSION = '1.2.0';
 
 	/** Transient key prefix for the cached, validated catalog. */
 	const CACHE_PREFIX = 'wpaw_node_catalog_';

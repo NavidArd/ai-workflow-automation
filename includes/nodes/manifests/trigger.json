@@ -6,6 +6,7 @@
   "capabilities": ["workflow entry point", "form submissions", "webhooks", "WordPress core events", "RSS polling"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "cloud",
   "config": [
     { "name": "triggerType", "type": "enum", "required": true, "default": "manual",
       "options": ["manual", "gravityForms", "wpForms", "contactForm7", "ninjaForms", "elementorForms", "webhook", "wpCore", "workflowOutput", "rss"],

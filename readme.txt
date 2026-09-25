@@ -2,15 +2,19 @@
 Contributors: massiveshift
 Tags: ai, automation, ai agent, ai chatbot, workflow
 Requires at least: 6.2
-Tested up to: 7.1.1
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 2.0.8
+Stable tag: 2.0.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
 Build AI agents, chatbots, and content workflows in WordPress with a visual, no-code builder. Free with your own API key.
 
 == Description ==
+
+Watch a workflow being built in five minutes: an AI reads each contact form submission, rates its urgency and emails the summary.
+
+https://www.youtube.com/watch?v=pRSDv6Gs-64
 
 **Website and docs:** [wpaiworkflowautomation.com](https://wpaiworkflowautomation.com)
 
@@ -64,7 +68,7 @@ Build AI agents, chatbots, and content workflows in WordPress with a visual, no-
 = Free vs. Cloud, your choice, per workflow =
 
 * **Local (free, BYOK).** Builder, core nodes, triggers, chat widget, and local execution are free forever. AI calls go directly from your site to the provider you configured, using your key. Your key **never leaves your WordPress install**. No account required.
-* **Cloud.** Connect a free account to run workflows on our engine with our keys: no key management, no PHP timeouts, server-side scheduling, and premium nodes.
+* **Cloud.** Connect a free account to run workflows on our engine with our keys: no key management, no PHP timeouts, server-side scheduling, and premium nodes. Some steps still run on your site inside a Cloud run, for example creating a post or parsing a document, without forcing the whole workflow to Local.
 
 
 == External services ==
@@ -79,7 +83,7 @@ Our hosted account, AI proxy, and workflow execution service. It is contacted on
 * **What is sent, and when:**
   * *When you create or connect an account:* your email and password, or a Google sign-in token, so we can authenticate you, plus your site URL so the site can be registered and issued a site key.
   * *When an AI node runs in keyless mode:* the prompt or messages, the model name, and the generation parameters for that request, so the call can run on our provider keys and return the result. Your own provider keys are never included.
-  * *When a workflow runs in Cloud mode:* the workflow definition and the trigger or input data for that run, so our engine can execute it and return the result. A finished run may perform a small, allow-listed WordPress action back on your site through a signed callback.
+  * *When a workflow runs in Cloud mode:* the workflow definition and the trigger or input data for that run, so our engine can execute it and return the result. A finished run, or a step partway through it, may run part of the workflow on your site over a signed, replay-protected connection: creating a post, saving to a table, parsing a document, and more, using your site's own WordPress permissions and provider keys. Cloud runs process what the workflow sends them; steps that touch your site run on your site, and your provider keys never leave it.
   * *While the site stays connected:* your plan status and remaining allowance are fetched periodically so the plugin can display them.
   * *If you redeem a legacy license:* the license key.
 * Terms and conditions: [wpaiworkflowautomation.com/terms-and-conditions](https://wpaiworkflowautomation.com/terms-and-conditions/)
@@ -136,7 +140,7 @@ For the free local mode, yes: you bring your own key (BYOK) from a provider like
 
 = What is the difference between BYOK and Cloud? =
 
-**BYOK (bring your own key)** runs your workflows locally using your own provider key: free, and your key never leaves WordPress. **Cloud** is our hosted option: connect an account and run AI or whole workflows on our servers using our keys, with no key management. You choose which mode each workflow uses.
+**BYOK (bring your own key)** runs your workflows locally using your own provider key: free, and your key never leaves WordPress. **Cloud** is our hosted option: connect an account and run AI or whole workflows on our servers using our keys, with no key management. Cloud no longer means every step runs on our infrastructure: some steps still run on your site, using your site's own permissions and keys, automatically, as part of the same Cloud run, instead of forcing the whole workflow to Local. You choose which mode each workflow uses.
 
 
 = Is my data safe? Do my API keys leave my site? =
@@ -169,6 +173,26 @@ No. The visual drag-and-drop builder lets you create complex, AI-powered workflo
 6. Human in the loop: review, approve, or edit what the AI drafted before it is sent or published.
 
 == Changelog ==
+
+= 2.0.9 =
+* New: a Cloud workflow no longer has to be all cloud. The steps that need your site, creating a post, saving to a table, writing a file, parsing a document, sending an email, fetching an image with your own key, now run on your site as part of the same Cloud run, and every other step runs in the cloud. Workflows that Cloud refused in 2.0.8 for those reasons run in Cloud now, with nothing for you to change. The builder shows on each node where that step will run and why, and tells you before the run how many steps go each way and roughly what it will cost. A step that runs on your site costs no credits.
+* New: the Loop node now repeats a fixed number of times, or while a condition holds, in Cloud as well as locally. Before, only a loop over a list ran in Cloud.
+* New: the execution view shows where each step ran, and how long a step on your site took.
+* Changed: email is sent by your site. A Send Email step now always goes out through your own site's mail setup, in Cloud runs as well as Local, so your sending domain, your From address and your deliverability stay yours. A delayed send is scheduled by your site as before, and a Send Email step no longer costs a credit.
+* Fixed: a fatal error that could take a site down. If the plugin's twice-daily licence check lost its scheduled entry, through a restored backup, a clone, a staging copy or a security plugin that clears scheduled tasks, every page of the site stopped loading, front end and admin, and wp-cli could not recover it either. It cannot happen now, and a site missing that entry repairs itself on the next page load.
+* Fixed: a post created by a Cloud run now carries the author, categories, featured image, product images and custom fields set on the node, because the Post node runs on your site.
+* Fixed: the Post node no longer discards the Content and Excerpt you configured when you also set a featured image. Reopening a saved node no longer hides those two fields either.
+* Fixed: a Cloud run that pauses, for a human task or for a step handed to your site, picks up where it left off instead of stopping there. Approving a task on the Tasks page now resumes its run and records the approval.
+* Fixed: a task from a Cloud run is now labelled with the step and the workflow that asked for it, for example "Approve draft: Weekly digest", so you can tell what you are approving.
+* Fixed: a Generate PDF step now saves the rendered PDF into your media library, which is what its label always promised. You get an attachment on your own site, not only a link to ours.
+* Fixed: signing in no longer writes the user's password hash into the options table, and into the debug log on a bad day.
+* Fixed: a busy site no longer runs more cloud steps at once than it should. Steps beyond the per-site limit of four wait their turn instead of all starting together, which protects shared hosting from a burst of cloud runs.
+* Fixed: a run that was accepted but never started is now picked up and retried automatically, instead of sitting at "pending" forever with no error.
+* Fixed: the plugin no longer logs other plugins' warnings under its own name, or suppresses them for the rest of the site.
+* Fixed: usage statistics are recorded when an event has nothing extra to report. Before, those events were rejected and the counts were short.
+* Changed: a Cloud loop set to accumulate now returns every iteration, not only the last one. If anything after the loop expected a single value, check it once after updating.
+* Changed: the API Call and Firecrawl nodes no longer reach private network addresses, in Local runs as well as Cloud. A site that genuinely needs this can opt back in with the wp_ai_workflows_allow_private_network_requests filter.
+* Removed: two features that could never be reached from the builder have been taken out, the MCP stdio transport and the PostgreSQL option for a knowledge base. Connect an App and the built-in knowledge base are unaffected.
 
 = 2.0.8 =
 * New: the getting-started walkthrough now asks once, on its first screen, whether you want to share anonymous usage data. The box is unticked, it says exactly what is collected, and you can change it any time in Settings. Nothing is sent unless you say yes.
@@ -302,6 +326,9 @@ No. The visual drag-and-drop builder lets you create complex, AI-powered workflo
 
 == Upgrade Notice ==
 
+= 2.0.9 =
+Fixes a fatal error that could take a site down, and a sign-in that wrote a password hash into your database. Cloud runs now use your site for the steps that need it, and send email through your own site. Recommended for everyone.
+
 = 2.0.8 =
 Cloud runs now carry every node setting, and anything Cloud cannot run is refused before the run with the reason. Multi-line prompts keep their line breaks. Recommended for everyone.
 
@@ -312,4 +339,4 @@ A guided setup with free cloud credits and verified API keys, plus fixes to the 
 Fixes account connection for new sign-ups, plus two Post node content fixes. Recommended for everyone.
 
 = 2.0.3 =
-Major relaunch. If you are updating from 1.4.x, your workflows and settings are preserved. The plugin now includes everything that used to be Pro, free with your own AI provider key (BYOK), plus an optional cloud service. The old Lite/Pro split and license system are retired; existing license holders keep their benefits when they connect an account. See the Account page after updating.
+Major relaunch. Updating from 1.4.x keeps your workflows and settings. Everything that used to be Pro is now free with your own AI provider key (BYOK), plus an optional cloud service. The Lite/Pro split and license system are retired; license holders keep their benefits on connecting an account.

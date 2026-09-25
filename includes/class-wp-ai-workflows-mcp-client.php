@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Production-Ready MCP (Model Context Protocol) Client for WP AI Workflows
- * Handles real API communication with various services and proper stdio communication
+ * Handles real API communication with preset services and custom HTTP MCP servers
  */
 class WP_AI_Workflows_MCP_Client {
 
@@ -192,33 +192,6 @@ class WP_AI_Workflows_MCP_Client {
 				),
 			),
 		),
-		'postgresql'      => array(
-			'name'        => 'PostgreSQL',
-			'description' => 'Execute queries and manage PostgreSQL databases',
-			'transport'   => 'http',
-			'tools'       => array(
-				array(
-					'id'          => 'query',
-					'name'        => 'Execute Query',
-					'description' => 'Execute a SQL query',
-				),
-				array(
-					'id'          => 'insert',
-					'name'        => 'Insert Record',
-					'description' => 'Insert a new record',
-				),
-				array(
-					'id'          => 'update',
-					'name'        => 'Update Record',
-					'description' => 'Update existing records',
-				),
-				array(
-					'id'          => 'create_table',
-					'name'        => 'Create Table',
-					'description' => 'Create a new table',
-				),
-			),
-		),
 		'chroma'          => array(
 			'name'        => 'Chroma',
 			'description' => 'Manage vector databases and embeddings with Chroma',
@@ -320,8 +293,6 @@ class WP_AI_Workflows_MCP_Client {
 		try {
 			if ( $custom_config['connectionType'] === 'http' ) {
 				return self::discover_tools_http( $custom_config );
-			} elseif ( $custom_config['connectionType'] === 'stdio' ) {
-				return self::discover_tools_stdio( $custom_config );
 			} else {
 				return new WP_Error( 'invalid_connection_type', 'Invalid connection type', array( 'status' => 400 ) );
 			}
@@ -434,155 +405,6 @@ class WP_AI_Workflows_MCP_Client {
 		);
 
 		return new WP_REST_Response( $tools, 200 );
-	}
-
-	/**
-	 * Production stdio communication with MCP servers
-	 */
-	private static function discover_tools_stdio( $config ) {
-		if ( empty( $config['command'] ) ) {
-			return new WP_Error( 'missing_command', 'Command is required for stdio servers', array( 'status' => 400 ) );
-		}
-
-		try {
-			$command      = escapeshellcmd( $config['command'] );
-			$args         = ! empty( $config['args'] ) ? array_map( 'escapeshellarg', $config['args'] ) : array();
-			$full_command = $command . ' ' . implode( ' ', $args );
-
-			// Build MCP tools/list request
-			$request = array(
-				'jsonrpc' => '2.0',
-				'id'      => wp_generate_uuid4(),
-				'method'  => 'tools/list',
-				'params'  => array(),
-			);
-
-			$json_request = wp_json_encode( $request ) . "\n";
-
-			// Open process with pipes
-			$descriptorspec = array(
-				0 => array( 'pipe', 'r' ), // stdin
-				1 => array( 'pipe', 'w' ), // stdout
-				2 => array( 'pipe', 'w' ),  // stderr
-			);
-
-			$process = proc_open( $full_command, $descriptorspec, $pipes );
-
-			if ( ! is_resource( $process ) ) {
-				throw new Exception( 'Failed to start MCP server process' );
-			}
-
-			// Write request to stdin
-			fwrite( $pipes[0], $json_request );
-			fclose( $pipes[0] );
-
-			// Read response from stdout with timeout
-			stream_set_timeout( $pipes[1], 30 );
-			$response = '';
-			while ( ! feof( $pipes[1] ) ) {
-				$chunk = fread( $pipes[1], 8192 );
-				if ( $chunk === false ) {
-					break;
-				}
-				$response .= $chunk;
-
-				// Check for timeout
-				$info = stream_get_meta_data( $pipes[1] );
-				if ( $info['timed_out'] ) {
-					throw new Exception( 'MCP server response timeout' );
-				}
-			}
-
-			// Get stderr for error information
-			$error_output = stream_get_contents( $pipes[2] );
-
-			fclose( $pipes[1] );
-			fclose( $pipes[2] );
-
-			$return_code = proc_close( $process );
-
-			if ( $return_code !== 0 ) {
-				throw new Exception( 'MCP server exited with code ' . intval( $return_code ) . ': ' . esc_html( $error_output ) );
-			}
-
-			// Parse JSON response
-			$lines         = explode( "\n", trim( $response ) );
-			$json_response = null;
-
-			foreach ( $lines as $line ) {
-				$line = trim( $line );
-				if ( empty( $line ) ) {
-					continue;
-				}
-
-				$data = json_decode( $line, true );
-				if ( json_last_error() === JSON_ERROR_NONE && isset( $data['jsonrpc'] ) ) {
-					$json_response = $data;
-					break;
-				}
-			}
-
-			if ( ! $json_response ) {
-				throw new Exception( 'Invalid JSON response from MCP server' );
-			}
-
-			if ( isset( $json_response['error'] ) ) {
-				throw new Exception( $json_response['error']['message'] ?? 'Unknown MCP error' );
-			}
-
-			if ( ! isset( $json_response['result']['tools'] ) ) {
-				throw new Exception( 'No tools found in MCP server response' );
-			}
-
-			// Convert MCP tools format to our format
-			$tools = array();
-			foreach ( $json_response['result']['tools'] as $tool ) {
-				$tools[] = array(
-					'id'          => $tool['name'],
-					'name'        => $tool['name'],
-					'description' => $tool['description'] ?? 'No description available',
-				);
-			}
-
-			WP_AI_Workflows_Utilities::debug_log(
-				'Stdio MCP tools discovered',
-				'info',
-				array(
-					'command'    => $command,
-					'tool_count' => count( $tools ),
-				)
-			);
-
-			return new WP_REST_Response( $tools, 200 );
-
-		} catch ( Exception $e ) {
-			WP_AI_Workflows_Utilities::debug_log(
-				'Stdio MCP discovery failed',
-				'error',
-				array(
-					'command' => $config['command'],
-					'error'   => $e->getMessage(),
-				)
-			);
-
-			// Fallback to configured custom tools
-			if ( ! empty( $config['customTools'] ) ) {
-				$tools = array();
-				foreach ( $config['customTools'] as $tool ) {
-					if ( ! empty( $tool['id'] ) && ! empty( $tool['name'] ) ) {
-						$tools[] = array(
-							'id'          => $tool['id'],
-							'name'        => $tool['name'],
-							'description' => $tool['description'] ?? 'No description available',
-						);
-					}
-				}
-
-				return new WP_REST_Response( $tools, 200 );
-			}
-
-			return new WP_Error( 'stdio_discovery_failed', $e->getMessage(), array( 'status' => 500 ) );
-		}
 	}
 
 	/**
@@ -702,9 +524,6 @@ class WP_AI_Workflows_MCP_Client {
 
 			case 'google_calendar':
 				return self::execute_google_calendar_api( $tool, $parameters, $auth_config );
-
-			case 'postgresql':
-				return self::execute_postgresql_query( $tool, $parameters, $auth_config );
 
 			case 'chroma':
 				return self::execute_chroma_api( $tool, $parameters, $auth_config );
@@ -1120,216 +939,6 @@ class WP_AI_Workflows_MCP_Client {
 	}
 
 	/**
-	 * Execute PostgreSQL queries
-	 */
-	private static function execute_postgresql_query( $tool, $parameters, $auth_config ) {
-		$host     = $auth_config['host'] ?? '';
-		$port     = $auth_config['port'] ?? 5432;
-		$database = $auth_config['database'] ?? '';
-		$username = $auth_config['username'] ?? '';
-		$password = $auth_config['password'] ?? '';
-
-		if ( empty( $host ) || empty( $database ) || empty( $username ) ) {
-			throw new Exception( 'PostgreSQL connection parameters are required' );
-		}
-
-		try {
-			$dsn = "pgsql:host={$host};port={$port};dbname={$database}";
-			$pdo = new PDO(
-				$dsn,
-				$username,
-				$password,
-				array(
-					PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-					PDO::ATTR_TIMEOUT => 30,
-				)
-			);
-
-			switch ( $tool ) {
-				case 'query':
-
-					$sql = $parameters['sql'] ?? '';
-					if ( empty( $sql ) ) {
-						throw new Exception( 'SQL query is required' );
-					}
-
-					// Basic SQL injection protection by validating SQL structure
-					$sql = trim( $sql );
-					if ( preg_match( '/;\s*(?:DROP|DELETE|TRUNCATE|ALTER|CREATE|GRANT|REVOKE)\s+/i', $sql ) ) {
-						throw new Exception( 'Dangerous SQL operations are not allowed' );
-					}
-
-					$params = array();
-					if ( ! empty( $parameters['params'] ) ) {
-						$params = json_decode( $parameters['params'], true ) ?: array();
-					}
-
-					$stmt = $pdo->prepare( $sql );
-					$stmt->execute( $params );
-
-					return $stmt->fetchAll( PDO::FETCH_ASSOC );
-
-				case 'insert':
-					$table = $parameters['table'] ?? '';
-					$data  = $parameters['data'] ?? '{}';
-
-					if ( empty( $table ) ) {
-						throw new Exception( 'Table name is required' );
-					}
-
-					// Sanitize table name to prevent SQL injection
-					if ( ! preg_match( '/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table ) ) {
-						throw new Exception( 'Invalid table name format' );
-					}
-
-					$insert_data = json_decode( $data, true );
-					if ( ! $insert_data ) {
-						throw new Exception( 'Valid JSON data is required' );
-					}
-
-					$columns = array_keys( $insert_data );
-					
-					// Sanitize column names to prevent SQL injection
-					foreach ( $columns as $column ) {
-						if ( ! preg_match( '/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column ) ) {
-							throw new Exception( 'Invalid column name format: ' . esc_html( $column ) );
-						}
-					}
-					
-					$placeholders = array_map(
-						function ( $col ) {
-							return ':' . $col;
-						},
-						$columns
-					);
-
-					// Use quoted identifiers for PostgreSQL
-					$quoted_table = '"' . str_replace( '"', '""', $table ) . '"';
-					$quoted_columns = array_map(
-						function ( $col ) {
-							return '"' . str_replace( '"', '""', $col ) . '"';
-						},
-						$columns
-					);
-
-					$sql = "INSERT INTO {$quoted_table} (" . implode( ', ', $quoted_columns ) . ') VALUES (' . implode( ', ', $placeholders ) . ')';
-
-					$stmt = $pdo->prepare( $sql );
-					foreach ( $insert_data as $key => $value ) {
-						$stmt->bindValue( ':' . $key, $value );
-					}
-
-					$stmt->execute();
-
-					return array( 'affected_rows' => $stmt->rowCount() );
-
-				case 'update':
-					$table = $parameters['table'] ?? '';
-					$data  = $parameters['data'] ?? '{}';
-					$where_clause = $parameters['where'] ?? '';
-					$where_params = $parameters['where_params'] ?? '{}';
-
-					if ( empty( $table ) || empty( $where_clause ) ) {
-						throw new Exception( 'Table name and WHERE clause are required for update' );
-					}
-
-					// Sanitize table name to prevent SQL injection
-					if ( ! preg_match( '/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table ) ) {
-						throw new Exception( 'Invalid table name format' );
-					}
-
-					// Basic validation of WHERE clause to prevent SQL injection
-					// This should only contain column names, operators, and placeholders
-					$where_clause = trim( $where_clause );
-					if ( preg_match( '/;\s*(?:DROP|DELETE|TRUNCATE|ALTER|CREATE|GRANT|REVOKE|INSERT|UPDATE)\s+/i', $where_clause ) ) {
-						throw new Exception( 'Invalid WHERE clause: dangerous SQL operations detected' );
-					}
-
-					$update_data = json_decode( $data, true );
-					if ( ! $update_data ) {
-						throw new Exception( 'Valid JSON data is required' );
-					}
-
-					$where_data = json_decode( $where_params, true ) ?: array();
-
-					// Sanitize column names to prevent SQL injection
-					foreach ( array_keys( $update_data ) as $column ) {
-						if ( ! preg_match( '/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column ) ) {
-							throw new Exception( 'Invalid column name format: ' . esc_html( $column ) );
-						}
-					}
-
-					// Build SET clause with proper quoting
-					$set_clauses = array();
-					foreach ( $update_data as $column => $value ) {
-						$quoted_column = '"' . str_replace( '"', '""', $column ) . '"';
-						$set_clauses[] = "{$quoted_column} = :{$column}";
-					}
-
-					$quoted_table = '"' . str_replace( '"', '""', $table ) . '"';
-					$sql = "UPDATE {$quoted_table} SET " . implode( ', ', $set_clauses ) . " WHERE {$where_clause}";
-
-					$stmt = $pdo->prepare( $sql );
-
-					// Bind update values
-					foreach ( $update_data as $key => $value ) {
-						$stmt->bindValue( ':' . $key, $value );
-					}
-
-					// Bind WHERE parameters
-					foreach ( $where_data as $key => $value ) {
-						$stmt->bindValue( ':' . $key, $value );
-					}
-
-					$stmt->execute();
-
-					return array( 'affected_rows' => $stmt->rowCount() );
-
-				case 'create_table':
-					$table_name = $parameters['table_name'] ?? '';
-					$columns_definition = $parameters['columns'] ?? '';
-
-					if ( empty( $table_name ) || empty( $columns_definition ) ) {
-						throw new Exception( 'Table name and columns definition are required' );
-					}
-
-					// Sanitize table name to prevent SQL injection
-					if ( ! preg_match( '/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table_name ) ) {
-						throw new Exception( 'Invalid table name format' );
-					}
-
-					// Basic validation of columns definition to prevent SQL injection
-					$columns_definition = trim( $columns_definition );
-					if ( empty( $columns_definition ) ) {
-						throw new Exception( 'Columns definition cannot be empty' );
-					}
-
-					// Prevent dangerous SQL operations in column definitions
-					if ( preg_match( '/;\s*(?:DROP|DELETE|TRUNCATE|ALTER|GRANT|REVOKE|INSERT|UPDATE|CREATE\s+(?:DATABASE|USER|ROLE))\s+/i', $columns_definition ) ) {
-						throw new Exception( 'Invalid column definition: dangerous SQL operations detected' );
-					}
-
-					// Use quoted identifier for table name
-					$quoted_table = '"' . str_replace( '"', '""', $table_name ) . '"';
-					
-					// Note: columns_definition should contain properly formatted PostgreSQL column definitions
-					// This is a basic implementation - in production, consider more strict validation
-					$sql = "CREATE TABLE {$quoted_table} ({$columns_definition})";
-
-					$stmt = $pdo->prepare( $sql );
-					$stmt->execute();
-
-					return array( 'message' => 'Table ' . esc_html( $table_name ) . ' created successfully' );
-
-				default:
-					throw new Exception( 'Unsupported PostgreSQL tool: ' . esc_html( $tool ) );
-			}
-		} catch ( PDOException $e ) {
-			throw new Exception( 'PostgreSQL error: ' . esc_html( $e->getMessage() ) );
-		}
-	}
-
-	/**
 	 * Execute Chroma API calls
 	 */
 	private static function execute_chroma_api( $tool, $parameters, $auth_config ) {
@@ -1448,8 +1057,6 @@ class WP_AI_Workflows_MCP_Client {
 
 		if ( $custom_config['connectionType'] === 'http' ) {
 			return self::test_custom_http_server( $custom_config, $selected_tool, $tool_parameters );
-		} elseif ( $custom_config['connectionType'] === 'stdio' ) {
-			return self::test_custom_stdio_server( $custom_config, $selected_tool, $tool_parameters );
 		}
 
 		return new WP_Error( 'invalid_connection_type', 'Invalid connection type', array( 'status' => 400 ) );
@@ -1512,120 +1119,6 @@ class WP_AI_Workflows_MCP_Client {
 	}
 
 	/**
-	 * Test custom stdio server with actual MCP protocol
-	 */
-	private static function test_custom_stdio_server( $config, $tool, $parameters ) {
-		if ( empty( $config['command'] ) ) {
-			return new WP_Error( 'missing_command', 'Command is required', array( 'status' => 400 ) );
-		}
-
-		try {
-			$command      = escapeshellcmd( $config['command'] );
-			$args         = ! empty( $config['args'] ) ? array_map( 'escapeshellarg', $config['args'] ) : array();
-			$full_command = $command . ' ' . implode( ' ', $args );
-
-			// Build MCP tool call request
-			$request = array(
-				'jsonrpc' => '2.0',
-				'id'      => wp_generate_uuid4(),
-				'method'  => 'tools/call',
-				'params'  => array(
-					'name'      => $tool,
-					'arguments' => $parameters,
-				),
-			);
-
-			$json_request = wp_json_encode( $request ) . "\n";
-
-			// Open process with pipes
-			$descriptorspec = array(
-				0 => array( 'pipe', 'r' ), // stdin
-				1 => array( 'pipe', 'w' ), // stdout
-				2 => array( 'pipe', 'w' ),  // stderr
-			);
-
-			$process = proc_open( $full_command, $descriptorspec, $pipes );
-
-			if ( ! is_resource( $process ) ) {
-				return new WP_Error( 'process_failed', 'Failed to start MCP server process', array( 'status' => 500 ) );
-			}
-
-			// Write request to stdin
-			fwrite( $pipes[0], $json_request );
-			fclose( $pipes[0] );
-
-			// Read response from stdout with timeout
-			stream_set_timeout( $pipes[1], 30 );
-			$response = '';
-			while ( ! feof( $pipes[1] ) ) {
-				$chunk = fread( $pipes[1], 8192 );
-				if ( $chunk === false ) {
-					break;
-				}
-				$response .= $chunk;
-
-				// Check for timeout
-				$info = stream_get_meta_data( $pipes[1] );
-				if ( $info['timed_out'] ) {
-					fclose( $pipes[1] );
-					fclose( $pipes[2] );
-					proc_close( $process );
-					return new WP_Error( 'timeout', 'MCP server response timeout', array( 'status' => 500 ) );
-				}
-			}
-
-			// Get stderr for error information
-			$error_output = stream_get_contents( $pipes[2] );
-
-			fclose( $pipes[1] );
-			fclose( $pipes[2] );
-
-			$return_code = proc_close( $process );
-
-			if ( $return_code !== 0 ) {
-				return new WP_Error( 'process_error', 'MCP server exited with code ' . intval( $return_code ) . ': ' . esc_html( $error_output ), array( 'status' => 500 ) );
-			}
-
-			// Parse JSON response
-			$lines         = explode( "\n", trim( $response ) );
-			$json_response = null;
-
-			foreach ( $lines as $line ) {
-				$line = trim( $line );
-				if ( empty( $line ) ) {
-					continue;
-				}
-
-				$data = json_decode( $line, true );
-				if ( json_last_error() === JSON_ERROR_NONE && isset( $data['jsonrpc'] ) ) {
-					$json_response = $data;
-					break;
-				}
-			}
-
-			if ( ! $json_response ) {
-				return new WP_Error( 'invalid_response', 'Invalid JSON response from MCP server', array( 'status' => 500 ) );
-			}
-
-			if ( isset( $json_response['error'] ) ) {
-				return new WP_Error( 'mcp_error', $json_response['error']['message'] ?? 'Unknown MCP error', array( 'status' => 500 ) );
-			}
-
-			return new WP_REST_Response(
-				array(
-					'success' => true,
-					'data'    => $json_response['result'] ?? $json_response,
-					'message' => "Successfully executed {$tool} on custom stdio server",
-				),
-				200
-			);
-
-		} catch ( Exception $e ) {
-			return new WP_Error( 'stdio_test_failed', $e->getMessage(), array( 'status' => 500 ) );
-		}
-	}
-
-	/**
 	 * Validate authentication for preset servers
 	 */
 	private static function validate_preset_server_auth( $server_type, $config ) {
@@ -1645,9 +1138,6 @@ class WP_AI_Workflows_MCP_Client {
 			case 'google_calendar':
 			case 'gmail':
 				$required_fields = array( 'access_token' );
-				break;
-			case 'postgresql':
-				$required_fields = array( 'host', 'database', 'username', 'password' );
 				break;
 			case 'chroma':
 				$required_fields = array( 'host' );
@@ -1732,23 +1222,6 @@ class WP_AI_Workflows_MCP_Client {
 
 		if ( $custom_config['connectionType'] === 'http' ) {
 			$result = self::test_custom_http_server( $custom_config, $tool, $parameters );
-
-			if ( is_wp_error( $result ) ) {
-				return array(
-					'type'    => 'error',
-					'content' => $result->get_error_message(),
-				);
-			}
-
-			$response_data = $result->get_data();
-			return array(
-				'type'    => 'mcpClient',
-				'content' => $response_data['data'] ?? $response_data,
-			);
-		}
-
-		if ( $custom_config['connectionType'] === 'stdio' ) {
-			$result = self::test_custom_stdio_server( $custom_config, $tool, $parameters );
 
 			if ( is_wp_error( $result ) ) {
 				return array(

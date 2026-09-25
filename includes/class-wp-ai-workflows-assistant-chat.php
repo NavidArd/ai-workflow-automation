@@ -296,11 +296,12 @@ class WP_AI_Workflows_Assistant_Chat {
 			$response = wp_remote_post(
 				'https://openrouter.ai/api/v1/chat/completions',
 				array(
-					'headers' => array(
-						'Authorization' => 'Bearer ' . $api_key,
-						'Content-Type'  => 'application/json',
-						'HTTP-Referer'  => get_site_url(),
-						'X-Title'       => 'WP AI Workflow Assistant',
+					'headers' => array_merge(
+						array(
+							'Authorization' => 'Bearer ' . $api_key,
+							'Content-Type'  => 'application/json',
+						),
+						WP_AI_Workflows_Utilities::openrouter_headers()
 					),
 					'body'    => wp_json_encode( $request_body ),
 					'timeout' => 120,
@@ -531,7 +532,7 @@ class WP_AI_Workflows_Assistant_Chat {
 			if ( ! empty( $changes['added'] ) ) {
 				foreach ( $changes['added'] as $new_node ) {
 					if ( ! isset( $new_node['id'] ) || empty( $new_node['id'] ) ) {
-						$new_node['id'] = ( $new_node['type'] ?? 'node' ) . '-' . time() . rand( 1000, 9999 );
+						$new_node['id'] = ( $new_node['type'] ?? 'node' ) . '-' . time() . wp_rand( 1000, 9999 );
 					}
 
 					if ( ! isset( $new_node['position'] ) ) {
@@ -1121,7 +1122,7 @@ class WP_AI_Workflows_Assistant_Chat {
 		$sessions_table = $wpdb->prefix . 'wp_ai_workflows_assistant_sessions';
 		$messages_table = $wpdb->prefix . 'wp_ai_workflows_assistant_messages';
 
-		$cutoff_date = date( 'Y-m-d H:i:s', strtotime( '-90 days' ) );
+		$cutoff_date = gmdate( 'Y-m-d H:i:s', strtotime( '-90 days' ) );
 
 		$old_sessions = $wpdb->get_col(
 		$wpdb->prepare(

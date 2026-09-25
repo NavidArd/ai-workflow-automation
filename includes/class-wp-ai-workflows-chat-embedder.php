@@ -367,16 +367,16 @@ class WP_AI_Workflows_Chat_Widget extends WP_Widget {
 	public function update( $new_instance, $old_instance ) {
 		$instance                    = array();
 		$instance['title']           = ( ! empty( $new_instance['title'] ) )
-			? strip_tags( $new_instance['title'] )
+			? wp_strip_all_tags( $new_instance['title'] )
 			: '';
 		$instance['workflow_id']     = ( ! empty( $new_instance['workflow_id'] ) )
-			? strip_tags( $new_instance['workflow_id'] )
+			? wp_strip_all_tags( $new_instance['workflow_id'] )
 			: '';
 		$instance['theme']           = ( ! empty( $new_instance['theme'] ) )
-			? strip_tags( $new_instance['theme'] )
+			? wp_strip_all_tags( $new_instance['theme'] )
 			: 'light';
 		$instance['position']        = ( ! empty( $new_instance['position'] ) )
-			? strip_tags( $new_instance['position'] )
+			? wp_strip_all_tags( $new_instance['position'] )
 			: 'bottom-right';
 		$instance['show_citations']  = ! empty( $new_instance['show_citations'] );
 		$instance['show_powered_by'] = ! empty( $new_instance['show_powered_by'] );

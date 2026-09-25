@@ -28,6 +28,9 @@ class WP_AI_Workflows_Platform_Callback {
 	/** Transient key prefix for the per-nonce idempotency record. */
 	const NONCE_PREFIX = 'wpaw_cb_nonce_';
 
+	/** Largest request body accepted, before any parsing. */
+	const MAX_REQUEST_BYTES = 1048576;
+
 	/**
 	 * Route handler for POST /wp-ai-workflows/v1/platform/callback.
 	 *
@@ -39,6 +42,12 @@ class WP_AI_Workflows_Platform_Callback {
 		$signature = (string) $request->get_header( 'X-WPAW-Signature' );
 		$timestamp = (string) $request->get_header( 'X-WPAW-Timestamp' );
 		$nonce     = (string) $request->get_header( 'X-WPAW-Nonce' );
+		$prefix    = (string) $request->get_header( 'X-WPAW-Key-Prefix' );
+
+		// ── 0. Size (before hashing anything) ────────────────────────────────────
+		if ( strlen( (string) $raw ) > self::MAX_REQUEST_BYTES ) {
+			return self::reject( 413, 'payload_too_large', 'This request is too large to process.', 'oversized_body' );
+		}
 
 		// ── 1. Signature (constant-time, BEFORE JSON parse) ──────────────────────
 		$secret = WP_AI_Workflows_Platform_Client::get_callback_secret();
@@ -50,9 +59,19 @@ class WP_AI_Workflows_Platform_Callback {
 			return self::reject( 401, 'invalid_signature', 'Signature verification failed.', 'missing_headers' );
 		}
 
-		$expected = hash_hmac( 'sha256', $timestamp . '.' . $nonce . '.' . $raw, (string) $secret );
-		if ( ! hash_equals( $expected, $signature ) ) {
+		$signed  = $timestamp . '.' . $nonce . '.' . $raw;
+		$matched = hash_equals( hash_hmac( 'sha256', $signed, (string) $secret ), $signature );
+
+		if ( ! $matched ) {
+			$previous = WP_AI_Workflows_Platform_Client::get_previous_callback_secret();
+			$matched  = ( '' !== $previous ) && hash_equals( hash_hmac( 'sha256', $signed, $previous ), $signature );
+		}
+		if ( ! $matched ) {
 			return self::reject( 401, 'invalid_signature', 'Signature verification failed.', 'bad_signature' );
+		}
+
+		if ( '' !== $prefix && ! self::prefix_accepted( $prefix ) ) {
+			return self::reject( 401, 'invalid_signature', 'Signature verification failed.', 'key_prefix' );
 		}
 
 		// ── 2. Timestamp window ──────────────────────────────────────────────────
@@ -88,7 +107,10 @@ class WP_AI_Workflows_Platform_Callback {
 			return self::finalize( $nonce_key, $signature, 400, false, null, 'unknown_action', 'Unknown callback action.' );
 		}
 
-		$result = call_user_func( $handlers[ $action ], $data );
+		$envelope = $payload;
+		unset( $envelope['payload'] );
+
+		$result = call_user_func( $handlers[ $action ], $data, $envelope );
 
 		if ( is_wp_error( $result ) ) {
 			$code    = $result->get_error_code();
@@ -98,20 +120,46 @@ class WP_AI_Workflows_Platform_Callback {
 			return self::finalize( $nonce_key, $signature, $status, false, null, (string) $code, (string) $err );
 		}
 
-		return self::finalize( $nonce_key, $signature, 200, true, $result, '', '' );
+		// A handler that has accepted work rather than finished it says so here.
+		$status = 200;
+		if ( is_array( $result ) && isset( $result['_status'] ) ) {
+			$status = (int) $result['_status'];
+			unset( $result['_status'] );
+		}
+
+		return self::finalize( $nonce_key, $signature, $status, true, $result, '', '' );
 	}
 
 	/**
-	 * The locked, default action allow-list. Filterable, but ships closed to exactly
-	 * the three v2.0 launch actions. Anything not here → 400 unknown_action.
+	 * Whether a presented key prefix is one this site currently answers to. An
+	 * absent header is not rejected: the signature is the authentication.
+	 *
+	 * @param string $prefix
+	 * @return bool
+	 */
+	private static function prefix_accepted( $prefix ) {
+		$current = WP_AI_Workflows_Platform_Client::get_key_prefix();
+		if ( '' !== $current && hash_equals( $current, $prefix ) ) {
+			return true;
+		}
+		$previous = WP_AI_Workflows_Platform_Client::get_previous_key_prefix();
+		return '' !== $previous && hash_equals( $previous, $prefix );
+	}
+
+	/**
+	 * The locked, default action allow-list. Filterable, but ships closed.
+	 * Anything not here → 400 unknown_action. `run_node` is bounded further: it
+	 * dispatches only to node types whose manifest permits running on the site.
 	 *
 	 * @return array<string,callable>
 	 */
 	private static function get_action_handlers() {
 		$handlers = array(
-			'save_output' => array( __CLASS__, 'action_save_output' ),
-			'insert_post' => array( __CLASS__, 'action_insert_post' ),
-			'update_post' => array( __CLASS__, 'action_update_post' ),
+			'save_output'       => array( __CLASS__, 'action_save_output' ),
+			'insert_post'       => array( __CLASS__, 'action_insert_post' ),
+			'update_post'       => array( __CLASS__, 'action_update_post' ),
+			'run_node'          => array( __CLASS__, 'action_run_node' ),
+			'fetch_step_result' => array( __CLASS__, 'action_fetch_step_result' ),
 		);
 		// Extensible but default-locked: filters may add actions on a hardened site.
 		return apply_filters( 'wp_ai_workflows_callback_actions', $handlers );
@@ -121,6 +169,33 @@ class WP_AI_Workflows_Platform_Callback {
 	 * Action handlers - each validates its own payload (fail-closed) and runs as
 	 * the system. No user-context escalation; no privileged (options/users) writes.
 	 * ------------------------------------------------------------------------- */
+
+	/**
+	 * run_node - run one node of a Cloud workflow on this site.
+	 *
+	 * @param array $payload  {stepId, nodeType, config, inputs, mode, deadline, resumeUrl, maxResultBytes}
+	 * @param array $envelope {executionId, nodeId}
+	 * @return array|WP_Error
+	 */
+	public static function action_run_node( array $payload, array $envelope = array() ) {
+		if ( ! class_exists( 'WP_AI_Workflows_Site_Step' ) ) {
+			return new WP_Error( 'unknown_action', 'Unknown callback action.', array( 'status' => 400 ) );
+		}
+		return WP_AI_Workflows_Site_Step::handle( $payload, $envelope );
+	}
+
+	/**
+	 * fetch_step_result - hand over the bytes behind a large site-step result.
+	 *
+	 * @param array $payload {stepId}
+	 * @return array|WP_Error
+	 */
+	public static function action_fetch_step_result( array $payload ) {
+		if ( ! class_exists( 'WP_AI_Workflows_Site_Step' ) ) {
+			return new WP_Error( 'unknown_action', 'Unknown callback action.', array( 'status' => 400 ) );
+		}
+		return WP_AI_Workflows_Site_Step::fetch_result( $payload );
+	}
 
 	/**
 	 * save_output - insert a sanitized row into a plugin/custom output table

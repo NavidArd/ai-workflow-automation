@@ -6,6 +6,8 @@
   "capabilities": ["human-in-the-loop", "approval gates", "content modification", "role/user assignment"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "either",
+  "siteStepMode": "async",
   "config": [
     { "name": "inputType", "type": "enum", "required": true, "default": "approval",
       "options": ["approval", "modification"], "description": "Approval gate or content modification task." },

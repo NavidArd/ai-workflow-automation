@@ -6,6 +6,7 @@
   "capabilities": ["stock image search", "Unsplash retrieval"],
   "modes": ["local"],
   "credits": 3,
+  "locus": "either",
   "config": [
     { "name": "searchTerm", "type": "string", "required": true, "supportsVariables": true, "description": "Search query." },
     { "name": "imageSize", "type": "enum", "required": false, "default": "regular",

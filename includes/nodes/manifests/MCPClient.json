@@ -6,6 +6,7 @@
   "capabilities": ["app actions via Pipedream Connect", "managed OAuth (your own account)", "dynamic action fields", "2,700+ third-party integrations"],
   "modes": ["local", "cloud"],
   "credits": 1,
+  "locus": "either",
   "config": [
     { "name": "appSlug", "type": "string", "required": true, "description": "Selected Pipedream app key/slug (e.g. slack, google_sheets, notion)." },
     { "name": "toolName", "type": "string", "required": true, "description": "Selected action name (e.g. google_sheets-add-single-row, slack-send-message)." },

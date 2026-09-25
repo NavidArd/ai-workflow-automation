@@ -12,7 +12,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_NODE_CATALOG_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 

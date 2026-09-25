@@ -159,7 +159,10 @@ class WP_AI_Workflows_Model_Catalog {
 			'https://openrouter.ai/api/v1/models',
 			array(
 				'timeout' => 15,
-				'headers' => array( 'Content-Type' => 'application/json' ),
+				'headers' => array_merge(
+					array( 'Content-Type' => 'application/json' ),
+					WP_AI_Workflows_Utilities::openrouter_headers()
+				),
 			)
 		);
 

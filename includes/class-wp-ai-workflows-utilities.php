@@ -511,6 +511,19 @@ class WP_AI_Workflows_Utilities {
 		return self::get_healed_setting_key( 'openrouter_api_key' );
 	}
 
+	/**
+	 * Standard OpenRouter attribution headers, used on every OpenRouter
+	 * request so the app listing resolves to this plugin.
+	 *
+	 * @return array{HTTP-Referer: string, X-Title: string}
+	 */
+	public static function openrouter_headers() {
+		return array(
+			'HTTP-Referer' => 'https://wpaiworkflowautomation.com',
+			'X-Title'      => 'AI Workflow Automation',
+		);
+	}
+
 	public static function get_unsplash_api_key() {
 		self::debug_function( __FUNCTION__ );
 
@@ -1501,11 +1514,12 @@ class WP_AI_Workflows_Utilities {
 		}
 
 		$url     = 'https://openrouter.ai/api/v1/chat/completions';
-		$headers = array(
-			'Authorization' => 'Bearer ' . $api_key,
-			'Content-Type'  => 'application/json',
-			'HTTP-Referer'  => get_site_url(),
-			'X-Title'       => get_bloginfo( 'name' ),
+		$headers = array_merge(
+			array(
+				'Authorization' => 'Bearer ' . $api_key,
+				'Content-Type'  => 'application/json',
+			),
+			self::openrouter_headers()
 		);
 
 		$messages = array(
@@ -1948,6 +1962,15 @@ class WP_AI_Workflows_Utilities {
 	}
 
 	public static function update_execution_status( $execution_id, $status, $message = '', $node_id = '' ) {
+		if ( empty( $execution_id ) ) {
+			return;
+		}
+
+		// A site step has no local execution row of its own.
+		if ( class_exists( 'WP_AI_Workflows_Site_Step' ) && WP_AI_Workflows_Site_Step::is_running_step() ) {
+			return;
+		}
+
 		self::debug_function(
 			__FUNCTION__,
 			array(

@@ -1,5 +1,9 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class WP_AI_Workflows_Node_Execution {
 
 	public function init(): void {
@@ -205,7 +209,7 @@ class WP_AI_Workflows_Node_Execution {
 							$data = array(
 								'title'       => $item->get_title() ?: '',
 								'link'        => $item->get_permalink() ?: '',
-								'description' => strip_tags( $item->get_description() ?: '' ),
+								'description' => wp_strip_all_tags( $item->get_description() ?: '' ),
 								'pubDate'     => $item->get_date( 'Y-m-d H:i:s' ) ?: '',
 								'author'      => $item->get_author() ? $item->get_author()->get_name() : '',
 							);
@@ -232,7 +236,7 @@ class WP_AI_Workflows_Node_Execution {
 							}
 
 							if ( $node['data']['rssSettings']['includeContent'] ) {
-								$data['content'] = strip_tags( $item->get_content() ?: '' );
+								$data['content'] = wp_strip_all_tags( $item->get_content() ?: '' );
 							}
 
 							array_walk(
@@ -407,14 +411,31 @@ class WP_AI_Workflows_Node_Execution {
 			}
 		}
 
-		$workflow      = WP_AI_Workflows_Workflow::get_workflow_by_id( $execution_id );
-		$workflow_name = $workflow ? $workflow['name'] : 'Unknown Workflow';
+		// A Cloud run's humanInput node dispatches here through the site-step path,
+		// where $execution_id is the local site-step row id, not a workflow id (see
+		// the hybrid-execution design's "Deviations" section). Looking that id up
+		// against the workflows table risks a coincidental id collision with an
+		// unrelated local workflow. The site-step row's platform_execution_id is
+		// the only identity this site actually has for that run, so use it.
+		$site_step = self::get_site_step_for_execution( $execution_id );
 
 		$task_data = array(
-			'workflow_id'   => $execution_id,
-			'workflow_name' => $workflow_name,
-			'execution_id'  => $execution_id,
-			'node_id'       => $node['id'],
+			'execution_id' => $execution_id,
+			'node_id'      => $node['id'],
+		);
+
+		if ( $site_step ) {
+			$task_data['workflow_id']   = 'cloud-execution-' . $site_step->platform_execution_id;
+			$task_data['workflow_name'] = self::human_task_label(
+				$node,
+				isset( $site_step->workflow_name ) ? (string) $site_step->workflow_name : '',
+				(string) $site_step->platform_execution_id
+			);
+		} else {
+			$task_data['workflow_id'] = $execution_id;
+		}
+
+		$task_data += array(
 			'assigned_user' => $node['data']['assignmentType'] === 'user' ? $node['data']['selectedUser'] : null,
 			'assigned_role' => $node['data']['assignmentType'] === 'role' ? $node['data']['selectedRole'] : null,
 			'input_type'    => $node['data']['inputType'],
@@ -442,6 +463,58 @@ class WP_AI_Workflows_Node_Execution {
 			);
 	}
 
+	/**
+	 * What a reviewer sees on the Tasks page and in the Operator Inbox for a task
+	 * a Cloud run asked for: the step's own name and the workflow it came from, so
+	 * the person approving it can tell what they are approving.
+	 *
+	 * @param array  $node          The humanInput node.
+	 * @param string $workflow_name Name the platform sent with the step.
+	 * @param string $execution_id  Platform execution id, the last-resort label.
+	 * @return string
+	 */
+	private static function human_task_label( array $node, $workflow_name, $execution_id ) {
+		$data = isset( $node['data'] ) && is_array( $node['data'] ) ? $node['data'] : array();
+
+		$step = isset( $data['nodeName'] ) ? trim( (string) $data['nodeName'] ) : '';
+		// The builder pre-fills "Human Input <node id>", which names nothing.
+		if ( '' === $step || 0 === strpos( $step, 'Human Input ' ) ) {
+			$input_type = isset( $data['inputType'] ) ? (string) $data['inputType'] : '';
+			$step       = 'modification' === $input_type ? 'Modification' : 'Approval';
+		}
+
+		$workflow_name = trim( (string) $workflow_name );
+		if ( '' === $workflow_name ) {
+			$workflow_name = 'Cloud run #' . $execution_id;
+		}
+
+		return $step . ': ' . $workflow_name;
+	}
+
+	/**
+	 * The site-step row this execution id belongs to, when it is one. Used only
+	 * to tell a hybrid Cloud dispatch apart from a genuine local execution id;
+	 * see execute_human_input_node().
+	 *
+	 * @param int $execution_id
+	 * @return object|null
+	 */
+	private static function get_site_step_for_execution( $execution_id ) {
+		if ( ! class_exists( 'WP_AI_Workflows_Database' ) ) {
+			return null;
+		}
+
+		global $wpdb;
+		WP_AI_Workflows_Database::ensure_site_steps_table();
+
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE id = %d',
+				WP_AI_Workflows_Database::site_steps_table(),
+				$execution_id
+			)
+		);
+	}
 
 	/**
 	 * Prompt fallback for an AI model node whose prompt field is empty: the incoming
@@ -796,7 +869,7 @@ class WP_AI_Workflows_Node_Execution {
 			);
 			return self::create_node_data(
 				'error',
-				__( 'WordPress AI is unavailable: this requires WordPress 7.0 or later with a provider configured under Settings > AI. Choose a different provider on this node.', 'wp-ai-workflows' )
+				__( 'WordPress AI is unavailable: this requires WordPress 7.0 or later with a provider configured under Settings > AI. Choose a different provider on this node.', 'ai-workflow-automation-lite' )
 			);
 		}
 
@@ -806,7 +879,7 @@ class WP_AI_Workflows_Node_Execution {
 			if ( ! $builder->is_supported_for_text_generation() ) {
 				return self::create_node_data(
 					'error',
-					__( 'WordPress AI has no text-generation provider configured. Set one up under Settings > AI (Connectors), or choose a different provider on this node.', 'wp-ai-workflows' )
+					__( 'WordPress AI has no text-generation provider configured. Set one up under Settings > AI (Connectors), or choose a different provider on this node.', 'ai-workflow-automation-lite' )
 				);
 			}
 
@@ -1189,13 +1262,15 @@ class WP_AI_Workflows_Node_Execution {
 				return self::create_node_data( 'error', 'Failed to schedule delayed output due to invalid delay settings' );
 			}
 
+			$site_step_running = class_exists( 'WP_AI_Workflows_Site_Step' ) && WP_AI_Workflows_Site_Step::is_running_step();
+
 			wp_schedule_single_event(
 				$delay_time,
 				'wp_ai_workflows_execute_delayed_output',
 				array(
 					'node'           => $node,
 					'output_content' => $output_content,
-					'execution_id'   => $execution_id,
+					'execution_id'   => $site_step_running ? 0 : $execution_id,
 				)
 			);
 
@@ -1619,6 +1694,7 @@ class WP_AI_Workflows_Node_Execution {
 		if ( ! empty( $node['data']['attachments'] ) ) {
 			foreach ( $node['data']['attachments'] as $attachment ) {
 				$attachment_path = null;
+				$temp_id         = null;
 
 				switch ( $attachment['source'] ) {
 					case 'upload':
@@ -1642,10 +1718,7 @@ class WP_AI_Workflows_Node_Execution {
 								$file_path = get_attached_file( $temp_attachment_id );
 								if ( $file_path && file_exists( $file_path ) ) {
 									$attachment_path = $file_path;
-									$processed_attachments[] = array(
-										'path'    => $attachment_path,
-										'temp_id' => $temp_attachment_id,
-									);
+									$temp_id         = $temp_attachment_id;
 								}
 							}
 						}
@@ -1655,7 +1728,7 @@ class WP_AI_Workflows_Node_Execution {
 				if ( $attachment_path ) {
 					$processed_attachments[] = array(
 						'path'    => $attachment_path,
-						'temp_id' => null,
+						'temp_id' => $temp_id,
 					);
 				}
 			}
@@ -2826,6 +2899,94 @@ class WP_AI_Workflows_Node_Execution {
 		}
 	}
 
+	/**
+	 * Whether the site owner lets nodes reach private, loopback and link-local addresses.
+	 *
+	 * @param string $url
+	 * @return bool
+	 */
+	public static function private_network_allowed( $url ) {
+		/**
+		 * Allow nodes to reach private, loopback and link-local addresses.
+		 *
+		 * @param bool   $allow Default false.
+		 * @param string $url   The URL the node wants to reach.
+		 */
+		return (bool) apply_filters( 'wp_ai_workflows_allow_private_network_requests', false, $url );
+	}
+
+	/**
+	 * Whether a node may send an outbound request to this URL. Addresses only this
+	 * server can reach are refused, so a workflow can never be pointed at the
+	 * network behind the site. A site owner who needs one opts in with the
+	 * `wp_ai_workflows_allow_private_network_requests` filter.
+	 *
+	 * @param string $url
+	 * @return true|WP_Error
+	 */
+	public static function validate_outbound_url( $url ) {
+		$url = trim( (string) $url );
+
+		if ( '' !== $url && self::private_network_allowed( $url ) ) {
+			$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+			if ( in_array( $scheme, array( 'http', 'https' ), true ) && wp_parse_url( $url, PHP_URL_HOST ) ) {
+				return true;
+			}
+		}
+
+		if ( '' === $url || ! wp_http_validate_url( $url ) ) {
+			return new WP_Error( 'invalid_url', 'Invalid URL provided.' );
+		}
+
+		$host = wp_parse_url( $url, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return new WP_Error( 'invalid_url', 'Invalid URL provided.' );
+		}
+
+		foreach ( self::resolve_host_addresses( $host ) as $address ) {
+			if ( ! filter_var( $address, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+				return new WP_Error( 'blocked_url', 'This address is not allowed: ' . $host );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Every address a host resolves to, including the host itself when it is
+	 * already an IP literal.
+	 *
+	 * @param string $host
+	 * @return array<int,string>
+	 */
+	private static function resolve_host_addresses( $host ) {
+		$bare = trim( strtolower( $host ), '[]' );
+
+		if ( filter_var( $bare, FILTER_VALIDATE_IP ) ) {
+			return array( $bare );
+		}
+
+		$addresses = array();
+
+		$ipv4 = gethostbynamel( $bare );
+		if ( is_array( $ipv4 ) ) {
+			$addresses = $ipv4;
+		}
+
+		if ( function_exists( 'dns_get_record' ) ) {
+			$records = @dns_get_record( $bare, DNS_AAAA );  // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- an unresolvable name is handled below.
+			if ( is_array( $records ) ) {
+				foreach ( $records as $record ) {
+					if ( ! empty( $record['ipv6'] ) ) {
+						$addresses[] = $record['ipv6'];
+					}
+				}
+			}
+		}
+
+		return $addresses;
+	}
+
 	public static function execute_firecrawl_node( $node, $input_data, $execution_id ) {
 		WP_AI_Workflows_Utilities::debug_function(
 			__FUNCTION__,
@@ -2839,6 +3000,14 @@ class WP_AI_Workflows_Node_Execution {
 		$data      = isset( $node['data'] ) && is_array( $node['data'] ) ? $node['data'] : array();
 
 		list( $operation, $params ) = self::firecrawl_build_params( $data, $input_data );
+
+		if ( ! empty( $params['url'] ) ) {
+			$allowed = self::validate_outbound_url( $params['url'] );
+			if ( is_wp_error( $allowed ) ) {
+				WP_AI_Workflows_Utilities::update_execution_status( $execution_id, 'error', $allowed->get_error_message(), $node['id'] );
+				return self::create_node_data( 'error', $allowed->get_error_message() );
+			}
+		}
 
 		WP_AI_Workflows_Utilities::update_execution_status( $execution_id, 'processing', 'Starting Firecrawl ' . $operation . ' operation', $node['id'] );
 
@@ -3283,18 +3452,108 @@ class WP_AI_Workflows_Node_Execution {
 		if ( '' === $file_url ) {
 			return self::create_node_data( 'error', 'The PDF render service did not return a file URL.' );
 		}
+		$file_id = isset( $result['fileId'] ) ? sanitize_text_field( (string) $result['fileId'] ) : '';
 
 		WP_AI_Workflows_Utilities::update_execution_status( $execution_id, 'processing', 'PDF generated' );
 
-		$output          = self::create_node_data( 'generatePdf', $file_url );
-		$output['pdf']   = array(
-			'fileUrl'        => $file_url,
-			'fileId'         => isset( $result['fileId'] ) ? sanitize_text_field( (string) $result['fileId'] ) : '',
+		$saved = self::save_pdf_to_media_library( $file_id, isset( $options['fileName'] ) ? $options['fileName'] : '' );
+
+		$local_url = isset( $saved['url'] ) ? (string) $saved['url'] : '';
+		$output    = self::create_node_data( 'generatePdf', '' !== $local_url ? $local_url : $file_url );
+
+		$output['pdf'] = array(
+			'fileUrl'        => '' !== $local_url ? $local_url : $file_url,
+			'platformUrl'    => $file_url,
+			'attachmentId'   => isset( $saved['id'] ) ? (int) $saved['id'] : 0,
+			'attachmentUrl'  => $local_url,
+			'fileId'         => $file_id,
 			'pages'          => isset( $result['pages'] ) ? (int) $result['pages'] : 0,
 			'bytes'          => isset( $result['bytes'] ) ? (int) $result['bytes'] : 0,
 			'creditsCharged' => isset( $result['creditsCharged'] ) ? (float) $result['creditsCharged'] : 0,
 		);
 		return $output;
+	}
+
+	/**
+	 * Put the rendered PDF in the media library. A failure here is not a run
+	 * failure: the step keeps the platform URL and the reason is logged.
+	 *
+	 * @param string $file_id   Platform file id from render_pdf()'s `fileId`.
+	 * @param string $file_name Configured file name, used for the attachment's title.
+	 * @return array{id:int,url:string} Zero id and empty url when nothing was saved.
+	 */
+	private static function save_pdf_to_media_library( $file_id, $file_name = '' ) {
+		$none = array(
+			'id'  => 0,
+			'url' => '',
+		);
+
+		if ( '' === (string) $file_id ) {
+			return $none;
+		}
+
+		$bytes = WP_AI_Workflows_Platform_Client::fetch_pdf_bytes( $file_id );
+		if ( is_wp_error( $bytes ) ) {
+			WP_AI_Workflows_Utilities::debug_log(
+				'Rendered PDF could not be fetched for the media library',
+				'warning',
+				array( 'error' => $bytes->get_error_message() )
+			);
+			return $none;
+		}
+
+		$name = sanitize_file_name( (string) $file_name );
+		if ( '' === $name ) {
+			$name = 'document-' . gmdate( 'Ymd-His' );
+		}
+		$name = preg_replace( '/\.pdf$/i', '', $name ) . '.pdf';
+
+		if ( ! function_exists( 'wp_upload_bits' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
+
+		add_filter( 'upload_mimes', array( __CLASS__, 'allow_pdf_type' ), 10, 1 );
+		$upload = wp_upload_bits( $name, null, $bytes );
+		remove_filter( 'upload_mimes', array( __CLASS__, 'allow_pdf_type' ) );
+
+		if ( ! empty( $upload['error'] ) ) {
+			WP_AI_Workflows_Utilities::debug_log(
+				'Rendered PDF could not be written to the uploads directory',
+				'warning',
+				array( 'error' => $upload['error'] )
+			);
+			return $none;
+		}
+
+		$attachment    = array(
+			'post_mime_type' => 'application/pdf',
+			'post_title'     => preg_replace( '/\.pdf$/i', '', $name ),
+			'post_content'   => '',
+			'post_status'    => 'inherit',
+			'guid'           => $upload['url'],
+		);
+		$attachment_id = wp_insert_attachment( $attachment, $upload['file'] );
+
+		if ( is_wp_error( $attachment_id ) || ! $attachment_id ) {
+			WP_AI_Workflows_Utilities::debug_log(
+				'Rendered PDF could not be saved to the media library',
+				'warning',
+				array( 'error' => is_wp_error( $attachment_id ) ? $attachment_id->get_error_message() : 'no attachment id' )
+			);
+			return $none;
+		}
+
+		wp_update_attachment_metadata( $attachment_id, wp_generate_attachment_metadata( $attachment_id, $upload['file'] ) );
+
+		$url = wp_get_attachment_url( (int) $attachment_id );
+
+		return array(
+			'id'  => (int) $attachment_id,
+			'url' => is_string( $url ) ? $url : '',
+		);
 	}
 
 	/**
@@ -3445,7 +3704,7 @@ class WP_AI_Workflows_Node_Execution {
 					$data = array(
 						'title'       => $item->get_title() ?: '',
 						'link'        => $item->get_permalink() ?: '',
-						'description' => strip_tags( $item->get_description() ?: '' ),
+						'description' => wp_strip_all_tags( $item->get_description() ?: '' ),
 						'pubDate'     => $item->get_date( 'Y-m-d H:i:s' ) ?: '',
 						'author'      => $item->get_author() ? $item->get_author()->get_name() : '',
 					);
@@ -3483,9 +3742,9 @@ class WP_AI_Workflows_Node_Execution {
 					}
 
 					if ( ! $settings['includeContent'] ) {
-						$data['description'] = strip_tags( $data['description'] );
+						$data['description'] = wp_strip_all_tags( $data['description'] );
 						if ( isset( $data['content'] ) ) {
-							$data['content'] = strip_tags( $data['content'] );
+							$data['content'] = wp_strip_all_tags( $data['content'] );
 						}
 					}
 
@@ -4418,8 +4677,9 @@ class WP_AI_Workflows_Node_Execution {
 			$cache_response = (bool) ( $node['data']['responseConfig']['cacheResponse'] ?? false );
 			$cache_time     = intval( $node['data']['responseConfig']['cacheTime'] ?? 300 );
 
-			if ( ! wp_http_validate_url( $url ) ) {
-				throw new Exception( 'Invalid URL provided: ' . $url );
+			$allowed = self::validate_outbound_url( $url );
+			if ( is_wp_error( $allowed ) ) {
+				throw new Exception( esc_html( $allowed->get_error_message() ) );
 			}
 
 			$headers = array();
@@ -4434,10 +4694,12 @@ class WP_AI_Workflows_Node_Execution {
 			}
 
 			$args = array(
-				'method'    => $method,
-				'timeout'   => $timeout / 1000,
-				'sslverify' => true,
-				'headers'   => $headers,
+				'method'             => $method,
+				'timeout'            => $timeout / 1000,
+				'sslverify'          => true,
+				'headers'            => $headers,
+				// Revalidates every hop, so a public URL cannot redirect inward.
+				'reject_unsafe_urls' => ! self::private_network_allowed( $url ),
 			);
 
 			if ( $method !== 'GET' && ! empty( $node['data']['body'] ) ) {
@@ -4945,7 +5207,7 @@ class WP_AI_Workflows_Node_Execution {
 			}
 
 			$unique_id     = uniqid();
-			$relative_path = date( 'Y/m' );
+			$relative_path = gmdate( 'Y/m' );
 			$file_dir      = $ai_workflows_dir . '/' . $relative_path;
 
 			if ( ! file_exists( $file_dir ) ) {
@@ -5050,7 +5312,7 @@ class WP_AI_Workflows_Node_Execution {
 			$content = preg_replace( '/<li>/', '• ', $content );
 			$content = preg_replace( '/<\/li>/', "\n", $content );
 
-			$content = strip_tags( $content );
+			$content = wp_strip_all_tags( $content );
 		}
 
 		$content = str_replace( "\r\n", "\n", $content );
@@ -5225,11 +5487,11 @@ class WP_AI_Workflows_Node_Execution {
 		try {
 			$temp_dir = sys_get_temp_dir() . '/docx_' . uniqid();
 			if ( ! file_exists( $temp_dir ) ) {
-				mkdir( $temp_dir );
+				wp_mkdir_p( $temp_dir );
 			}
-			mkdir( $temp_dir . '/word' );
-			mkdir( $temp_dir . '/_rels' );
-			mkdir( $temp_dir . '/word/_rels' );
+			wp_mkdir_p( $temp_dir . '/word' );
+			wp_mkdir_p( $temp_dir . '/_rels' );
+			wp_mkdir_p( $temp_dir . '/word/_rels' );
 
 			$wordml = self::convert_markdown_to_wordml( $content );
 
@@ -5405,7 +5667,7 @@ class WP_AI_Workflows_Node_Execution {
 
 			file_put_contents( $temp_dir . '/word/settings.xml', $settings_xml );
 
-			mkdir( $temp_dir . '/docProps' );
+			wp_mkdir_p( $temp_dir . '/docProps' );
 
 			$core_xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" 
@@ -5414,8 +5676,8 @@ class WP_AI_Workflows_Node_Execution {
   <dc:title>Generated Document</dc:title>
   <dc:creator>WP AI Workflows</dc:creator>
   <cp:lastModifiedBy>WP AI Workflows</cp:lastModifiedBy>
-  <dcterms:created xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . date( 'Y-m-d\TH:i:s\Z' ) . '</dcterms:created>
-  <dcterms:modified xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . date( 'Y-m-d\TH:i:s\Z' ) . '</dcterms:modified>
+  <dcterms:created xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . gmdate( 'Y-m-d\TH:i:s\Z' ) . '</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . gmdate( 'Y-m-d\TH:i:s\Z' ) . '</dcterms:modified>
 </cp:coreProperties>';
 
 			file_put_contents( $temp_dir . '/docProps/core.xml', $core_xml );
@@ -5676,12 +5938,18 @@ class WP_AI_Workflows_Node_Execution {
 				if ( is_dir( $dir . '/' . $object ) ) {
 					self::remove_directory( $dir . '/' . $object );
 				} else {
-					unlink( $dir . '/' . $object );
+					wp_delete_file( $dir . '/' . $object );
 				}
 			}
 		}
 
-		rmdir( $dir );
+		global $wp_filesystem;
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		if ( WP_Filesystem() && $wp_filesystem ) {
+			$wp_filesystem->rmdir( $dir );
+		}
 	}
 
 	/**
@@ -5734,10 +6002,23 @@ class WP_AI_Workflows_Node_Execution {
 	}
 
 
-	private static function create_attachment_from_url( $url, $parent_post_id = 0 ) {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
+	/**
+	 * @param string $url
+	 * @param int    $parent_post_id
+	 * @param string $file_name Overrides the name derived from the URL, for a URL
+	 *                          whose path says nothing useful (a download endpoint).
+	 * @return int|WP_Error|null
+	 */
+	private static function create_attachment_from_url( $url, $parent_post_id = 0, $file_name = '' ) {
+		if ( ! function_exists( 'download_url' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		if ( ! function_exists( 'media_handle_sideload' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+		}
+		if ( ! function_exists( 'wp_generate_attachment_metadata' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+		}
 
 		$clean_url = strtok( $url, '?' );
 
@@ -5754,13 +6035,18 @@ class WP_AI_Workflows_Node_Execution {
 			return $temp_file;
 		}
 
-		$mime_type = mime_content_type( $temp_file );
+		// fileinfo is not guaranteed on shared hosting, and this used to fatal there.
+		$mime_type = function_exists( 'mime_content_type' ) ? (string) mime_content_type( $temp_file ) : '';
+		if ( '' === $mime_type && function_exists( 'wp_check_filetype' ) ) {
+			$checked   = wp_check_filetype( '' !== $file_name ? $file_name : (string) $clean_url );
+			$mime_type = empty( $checked['type'] ) ? '' : (string) $checked['type'];
+		}
 
 		$ext = self::get_file_extension_from_mime( $mime_type );
 
-		$filename = sanitize_file_name(
-			pathinfo( $clean_url, PATHINFO_FILENAME ) . '.' . $ext
-		);
+		$filename = '' !== $file_name
+			? sanitize_file_name( $file_name )
+			: sanitize_file_name( pathinfo( $clean_url, PATHINFO_FILENAME ) . '.' . $ext );
 
 		$file_array = array(
 			'name'     => $filename,
@@ -5778,7 +6064,7 @@ class WP_AI_Workflows_Node_Execution {
 		remove_filter( 'upload_mimes', array( __CLASS__, 'allow_image_types' ) );
 		remove_filter( 'upload_dir', array( __CLASS__, 'set_upload_dir' ) );
 
-		@unlink( $temp_file );
+		wp_delete_file( $temp_file );
 
 		if ( is_wp_error( $attachment_id ) ) {
 			WP_AI_Workflows_Utilities::debug_log(
@@ -5838,6 +6124,15 @@ class WP_AI_Workflows_Node_Execution {
 		);
 
 		return isset( $mime_map[ $mime_type ] ) ? $mime_map[ $mime_type ] : 'bin';
+	}
+
+	/**
+	 * @param array $mimes
+	 * @return array
+	 */
+	public static function allow_pdf_type( $mimes ) {
+		$mimes['pdf'] = 'application/pdf';
+		return $mimes;
 	}
 
 	public static function allow_image_types( $mimes ) {
@@ -5992,8 +6287,8 @@ class WP_AI_Workflows_Node_Execution {
 			'{{current_time}}'       => current_time( 'H:i:s' ),
 			'{{current_datetime}}'   => current_time( 'Y-m-d H:i:s' ),
 			'{{current_timestamp}}'  => current_time( 'timestamp' ),
-			'{{yesterday}}'          => date( 'Y-m-d', strtotime( '-1 day' ) ),
-			'{{tomorrow}}'           => date( 'Y-m-d', strtotime( '+1 day' ) ),
+			'{{yesterday}}'          => wp_date( 'Y-m-d', strtotime( '-1 day' ) ),
+			'{{tomorrow}}'           => wp_date( 'Y-m-d', strtotime( '+1 day' ) ),
 			'{{current_month}}'      => current_time( 'F' ),
 			'{{current_year}}'       => current_time( 'Y' ),
 			'{{current_day}}'        => current_time( 'l' ),
@@ -6015,8 +6310,8 @@ class WP_AI_Workflows_Node_Execution {
 			'{{post_type}}'          => get_post_type(),
 			'{{post_status}}'        => get_post_status(),
 			'{{post_url}}'           => get_permalink(),
-			'{{post_categories}}'    => strip_tags( get_the_category_list( ', ' ) ),
-			'{{post_tags}}'          => strip_tags( get_the_tag_list( '', ', ', '' ) ),
+			'{{post_categories}}'    => wp_strip_all_tags( get_the_category_list( ', ' ) ),
+			'{{post_tags}}'          => wp_strip_all_tags( get_the_tag_list( '', ', ', '' ) ),
 
 			'{{php_version}}'        => phpversion(),
 			'{{wp_version}}'         => get_bloginfo( 'version' ),
@@ -6037,7 +6332,7 @@ class WP_AI_Workflows_Node_Execution {
 					'{{product_sku}}'               => $product->get_sku(),
 					'{{product_stock}}'             => $product->get_stock_quantity(),
 					'{{product_stock_status}}'      => $product->get_stock_status(),
-					'{{product_category}}'          => strip_tags( wc_get_product_category_list( $product->get_id() ) ),
+					'{{product_category}}'          => wp_strip_all_tags( wc_get_product_category_list( $product->get_id() ) ),
 					'{{product_short_description}}' => $product->get_short_description(),
 					'{{product_type}}'              => $product->get_type(),
 					'{{product_url}}'               => get_permalink( $product->get_id() ),
@@ -6065,10 +6360,10 @@ class WP_AI_Workflows_Node_Execution {
 		}
 
 		if ( strpos( $content, '{{random_number}}' ) !== false ) {
-			$patterns['{{random_number}}'] = mt_rand( 0, 100 );
+			$patterns['{{random_number}}'] = wp_rand( 0, 100 );
 		}
 		if ( strpos( $content, '{{random_number_1000}}' ) !== false ) {
-			$patterns['{{random_number_1000}}'] = mt_rand( 0, 1000 );
+			$patterns['{{random_number_1000}}'] = wp_rand( 0, 1000 );
 		}
 		if ( strpos( $content, '{{random_string}}' ) !== false ) {
 			$patterns['{{random_string}}'] = substr( str_shuffle( 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' ), 0, 8 );
@@ -6619,7 +6914,7 @@ class WP_AI_Workflows_Node_Execution {
 		do {
 			if ( $attempts > 0 ) {
 				// Exponential backoff with jitter
-				$delay = min( pow( 2, $attempts ) + rand( 0, 1000 ) / 1000, 30 );
+				$delay = min( pow( 2, $attempts ) + wp_rand( 0, 1000 ) / 1000, 30 );
 				sleep( $delay );
 			}
 

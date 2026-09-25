@@ -122,8 +122,8 @@ class WP_AI_Workflows_Abilities {
 		wp_register_ability_category(
 			self::CATEGORY_SLUG,
 			array(
-				'label'       => __( 'AI Workflow Automation', 'wp-ai-workflows' ),
-				'description' => __( 'Run AI Workflow Automation workflows as agent-invokable tools.', 'wp-ai-workflows' ),
+				'label'       => __( 'AI Workflow Automation', 'ai-workflow-automation-lite' ),
+				'description' => __( 'Run AI Workflow Automation workflows as agent-invokable tools.', 'ai-workflow-automation-lite' ),
 			)
 		);
 	}
@@ -142,12 +142,12 @@ class WP_AI_Workflows_Abilities {
 		wp_register_ability(
 			self::NAMESPACE_SLUG . '/list-workflows',
 			array(
-				'label'               => __( 'List AI workflows', 'wp-ai-workflows' ),
-				'description'         => __( 'Lists the active AI Workflow Automation workflows that are exposed to AI agents, including each one\'s runnable ability name and trigger type.', 'wp-ai-workflows' ),
+				'label'               => __( 'List AI workflows', 'ai-workflow-automation-lite' ),
+				'description'         => __( 'Lists the active AI Workflow Automation workflows that are exposed to AI agents, including each one\'s runnable ability name and trigger type.', 'ai-workflow-automation-lite' ),
 				'category'            => self::CATEGORY_SLUG,
 				'output_schema'       => array(
 					'type'        => 'array',
-					'description' => __( 'The list of exposed workflows.', 'wp-ai-workflows' ),
+					'description' => __( 'The list of exposed workflows.', 'ai-workflow-automation-lite' ),
 					'items'       => array(
 						'type'       => 'object',
 						'properties' => array(
@@ -176,14 +176,14 @@ class WP_AI_Workflows_Abilities {
 				$ability_name,
 				array(
 					/* translators: %s: workflow name. */
-					'label'               => sprintf( __( 'Run workflow: %s', 'wp-ai-workflows' ), $workflow['name'] ),
+					'label'               => sprintf( __( 'Run workflow: %s', 'ai-workflow-automation-lite' ), $workflow['name'] ),
 					/* translators: %s: workflow name. */
-					'description'         => sprintf( __( 'Executes the "%s" AI workflow on this WordPress site and returns its output. Runs locally using the site\'s own AI provider keys.', 'wp-ai-workflows' ), $workflow['name'] ),
+					'description'         => sprintf( __( 'Executes the "%s" AI workflow on this WordPress site and returns its output. Runs locally using the site\'s own AI provider keys.', 'ai-workflow-automation-lite' ), $workflow['name'] ),
 					'category'            => self::CATEGORY_SLUG,
 					'input_schema'        => self::build_input_schema( $workflow ),
 					'output_schema'       => array(
 						'type'        => 'object',
-						'description' => __( 'The workflow execution result.', 'wp-ai-workflows' ),
+						'description' => __( 'The workflow execution result.', 'ai-workflow-automation-lite' ),
 						'properties'  => array(
 							'execution_id' => array( 'type' => array( 'integer', 'string' ) ),
 							'status'       => array( 'type' => 'string' ),
@@ -234,7 +234,7 @@ class WP_AI_Workflows_Abilities {
 					'type'        => 'string',
 					'description' => sprintf(
 						/* translators: %s: webhook field key. */
-						__( 'Value for the "%s" webhook field.', 'wp-ai-workflows' ),
+						__( 'Value for the "%s" webhook field.', 'ai-workflow-automation-lite' ),
 						$entry['key']
 					),
 				);
@@ -244,13 +244,13 @@ class WP_AI_Workflows_Abilities {
 				// Free-form payload when no keys are declared.
 				return array(
 					'type'        => 'object',
-					'description' => __( 'Webhook payload passed to the workflow trigger.', 'wp-ai-workflows' ),
+					'description' => __( 'Webhook payload passed to the workflow trigger.', 'ai-workflow-automation-lite' ),
 				);
 			}
 
 			return array(
 				'type'        => 'object',
-				'description' => __( 'Webhook payload passed to the workflow trigger.', 'wp-ai-workflows' ),
+				'description' => __( 'Webhook payload passed to the workflow trigger.', 'ai-workflow-automation-lite' ),
 				'properties'  => $properties,
 			);
 		}
@@ -259,11 +259,11 @@ class WP_AI_Workflows_Abilities {
 		// workflow's stored trigger content for this run.
 		return array(
 			'type'        => 'object',
-			'description' => __( 'Input passed to the manual workflow trigger.', 'wp-ai-workflows' ),
+			'description' => __( 'Input passed to the manual workflow trigger.', 'ai-workflow-automation-lite' ),
 			'properties'  => array(
 				'input' => array(
 					'type'        => 'string',
-					'description' => __( 'Text input for the workflow. When provided it overrides the workflow\'s stored trigger content for this run.', 'wp-ai-workflows' ),
+					'description' => __( 'Text input for the workflow. When provided it overrides the workflow\'s stored trigger content for this run.', 'ai-workflow-automation-lite' ),
 				),
 			),
 		);
@@ -308,12 +308,12 @@ class WP_AI_Workflows_Abilities {
 	 */
 	public static function execute_run_workflow( $workflow_id, $input = null ) {
 		if ( ! class_exists( 'WP_AI_Workflows_Workflow' ) ) {
-			return new WP_Error( 'wpaw_unavailable', __( 'Workflow engine is not available.', 'wp-ai-workflows' ) );
+			return new WP_Error( 'wpaw_unavailable', __( 'Workflow engine is not available.', 'ai-workflow-automation-lite' ) );
 		}
 
 		$workflow = WP_AI_Workflows_Workflow_DBAL::get_workflow_by_id( $workflow_id );
 		if ( ! $workflow || 'active' !== ( $workflow['status'] ?? '' ) ) {
-			return new WP_Error( 'wpaw_workflow_not_found', __( 'Workflow not found or inactive.', 'wp-ai-workflows' ), array( 'status' => 404 ) );
+			return new WP_Error( 'wpaw_workflow_not_found', __( 'Workflow not found or inactive.', 'ai-workflow-automation-lite' ), array( 'status' => 404 ) );
 		}
 
 		$trigger      = self::find_trigger( $workflow );
@@ -523,8 +523,8 @@ class WP_AI_Workflows_Abilities {
 			self::MCP_SERVER_ID,
 			self::NAMESPACE_SLUG,
 			'mcp',
-			__( 'AI Workflow Automation', 'wp-ai-workflows' ),
-			__( 'Run AI Workflow Automation workflows as MCP tools.', 'wp-ai-workflows' ),
+			__( 'AI Workflow Automation', 'ai-workflow-automation-lite' ),
+			__( 'Run AI Workflow Automation workflows as MCP tools.', 'ai-workflow-automation-lite' ),
 			WP_AI_WORKFLOWS_PRO_VERSION,
 			array( $transport_class ),
 			class_exists( $error_handler_class ) ? $error_handler_class : null,

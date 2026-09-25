@@ -66,15 +66,15 @@ class WP_AI_Workflows_WPOrg_Migration {
 		);
 		?>
 		<div class="notice notice-info">
-			<p><strong><?php esc_html_e( 'AI Workflow Automation is now on WordPress.org', 'wp-ai-workflows' ); ?></strong></p>
-			<p><?php esc_html_e( 'Switch once to get automatic updates from WordPress.org. Your workflows and settings are preserved.', 'wp-ai-workflows' ); ?></p>
+			<p><strong><?php esc_html_e( 'AI Workflow Automation is now on WordPress.org', 'ai-workflow-automation-lite' ); ?></strong></p>
+			<p><?php esc_html_e( 'Switch once to get automatic updates from WordPress.org. Your workflows and settings are preserved.', 'ai-workflow-automation-lite' ); ?></p>
 			<p>
 				<form method="post" action="<?php echo esc_url( $switch_url ); ?>" style="display:inline-block;margin-right:6px;">
 					<input type="hidden" name="action" value="<?php echo esc_attr( self::SWITCH_ACTION ); ?>" />
 					<?php wp_nonce_field( self::SWITCH_ACTION ); ?>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Switch now', 'wp-ai-workflows' ); ?></button>
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Switch now', 'ai-workflow-automation-lite' ); ?></button>
 				</form>
-				<a href="<?php echo esc_url( $dismiss_url ); ?>" class="button"><?php esc_html_e( 'Dismiss', 'wp-ai-workflows' ); ?></a>
+				<a href="<?php echo esc_url( $dismiss_url ); ?>" class="button"><?php esc_html_e( 'Dismiss', 'ai-workflow-automation-lite' ); ?></a>
 			</p>
 		</div>
 		<?php
@@ -96,7 +96,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 
 		if ( 'success' === $status || 'already' === $status ) {
 			echo '<div class="notice notice-success is-dismissible"><p>';
-			echo esc_html__( 'Switched. Updates now come from WordPress.org. You can delete the old copy from the Plugins screen.', 'wp-ai-workflows' );
+			echo esc_html__( 'Switched. Updates now come from WordPress.org. You can delete the old copy from the Plugins screen.', 'ai-workflow-automation-lite' );
 			echo '</p></div>';
 			return;
 		}
@@ -106,7 +106,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 			delete_transient( self::MSG_PREFIX . get_current_user_id() );
 
 			echo '<div class="notice notice-error is-dismissible"><p>';
-			echo esc_html__( 'The switch to WordPress.org could not be completed. Your current plugin is unchanged.', 'wp-ai-workflows' );
+			echo esc_html__( 'The switch to WordPress.org could not be completed. Your current plugin is unchanged.', 'ai-workflow-automation-lite' );
 			if ( is_string( $message ) && '' !== $message ) {
 				echo ' ' . esc_html( $message );
 			}
@@ -116,7 +116,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 
 	public function handle_switch() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'wp-ai-workflows' ), 403 );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'ai-workflow-automation-lite' ), 403 );
 		}
 		check_admin_referer( self::SWITCH_ACTION );
 
@@ -136,7 +136,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 		$info     = $this->get_remote_info();
 		$download = ( $info && ! empty( $info->download_link ) ) ? $info->download_link : '';
 		if ( '' === $download ) {
-			$this->redirect_with_status( 'error', __( 'The WordPress.org download URL could not be determined.', 'wp-ai-workflows' ) );
+			$this->redirect_with_status( 'error', __( 'The WordPress.org download URL could not be determined.', 'ai-workflow-automation-lite' ) );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -159,7 +159,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 
 	public function handle_dismiss() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'wp-ai-workflows' ), 403 );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'ai-workflow-automation-lite' ), 403 );
 		}
 		check_admin_referer( self::DISMISS_ACTION );
 
@@ -179,7 +179,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
 		if ( ! WP_Filesystem() ) {
-			return new WP_Error( 'fs_unavailable', __( 'The filesystem could not be initialized.', 'wp-ai-workflows' ) );
+			return new WP_Error( 'fs_unavailable', __( 'The filesystem could not be initialized.', 'ai-workflow-automation-lite' ) );
 		}
 
 		$skin      = new WP_Ajax_Upgrader_Skin();
@@ -197,7 +197,7 @@ class WP_AI_Workflows_WPOrg_Migration {
 			return $skin_errors;
 		}
 		if ( true !== $installed ) {
-			return new WP_Error( 'install_failed', __( 'The WordPress.org copy could not be installed.', 'wp-ai-workflows' ) );
+			return new WP_Error( 'install_failed', __( 'The WordPress.org copy could not be installed.', 'ai-workflow-automation-lite' ) );
 		}
 
 		$activated = activate_plugin( self::LITE_BASENAME );

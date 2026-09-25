@@ -500,11 +500,11 @@ class WP_AI_Workflows_Workflow_DBAL {
 							}
 
 							if ( ! isset( $workflow_data['createdAt'] ) ) {
-								$workflow_data['createdAt'] = $row['created_at'] ?? date( 'Y-m-d H:i:s' );
+								$workflow_data['createdAt'] = $row['created_at'] ?? gmdate( 'Y-m-d H:i:s' );
 							}
 
 							if ( ! isset( $workflow_data['updatedAt'] ) ) {
-								$workflow_data['updatedAt'] = $row['updated_at'] ?? date( 'Y-m-d H:i:s' );
+								$workflow_data['updatedAt'] = $row['updated_at'] ?? gmdate( 'Y-m-d H:i:s' );
 							}
 
 							if ( ! isset( $workflow_data['nodes'] ) ) {
@@ -539,8 +539,8 @@ class WP_AI_Workflows_Workflow_DBAL {
 							'id'           => $row['id'],
 							'name'         => $row['name'] . ' (⚠️ Error: ' . substr( $e->getMessage(), 0, 30 ) . ')',
 							'status'       => $row['status'] ?? 'inactive',
-							'createdAt'    => $row['created_at'] ?? date( 'Y-m-d H:i:s' ),
-							'updatedAt'    => $row['updated_at'] ?? date( 'Y-m-d H:i:s' ),
+							'createdAt'    => $row['created_at'] ?? gmdate( 'Y-m-d H:i:s' ),
+							'updatedAt'    => $row['updated_at'] ?? gmdate( 'Y-m-d H:i:s' ),
 							'createdBy'    => $row['created_by'] ?? 'unknown',
 							'nodes'        => array(),
 							'edges'        => array(),

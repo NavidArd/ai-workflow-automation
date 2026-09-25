@@ -13,6 +13,10 @@ class WP_AI_Workflows_Workflow {
 		add_action( 'wp_ai_workflows_execute_webhook_workflow', array( $this, 'execute_webhook_workflow' ), 10, 2 );
 		add_action( 'wp_ai_workflows_execute_workflow', array( $this, 'handle_workflow_execution' ), 10, 3 );
 		add_action( 'wp_ai_workflows_run_manual_async', array( __CLASS__, 'run_manual_async' ), 10, 1 );
+		add_action( 'wp_ai_workflows_reconcile_pending_executions', array( __CLASS__, 'reconcile_stale_pending_executions' ) );
+		// Deferred to init priority 20: the wp_ai_workflows_5min schedule that
+		// register_rss_schedules() adds (default priority, same hook) must exist first.
+		add_action( 'init', array( __CLASS__, 'ensure_pending_reconcile_watchdog' ), 20 );
 		add_action( 'gform_after_submission', array( $this, 'handle_gravity_forms_submission' ), 10, 2 );
 		add_action( 'wpforms_process_complete', array( $this, 'handle_wpforms_submission' ), 10, 4 );
 		add_action( 'wpcf7_before_send_mail', array( $this, 'handle_cf7_submission' ), 10, 1 );
@@ -981,6 +985,97 @@ class WP_AI_Workflows_Workflow {
 		}
 	}
 
+	/**
+	 * Recurring backstop for a manual run stuck at 'pending': the one-shot event
+	 * dispatch_manual_run_async() schedules (and its non-blocking spawn_cron() kick)
+	 * can be lost under a burst of concurrent requests or a mid-request restart,
+	 * leaving the row with nothing left to notice it. Deferred to init priority 20 -
+	 * the wp_ai_workflows_5min schedule register_rss_schedules() adds on init
+	 * (default priority, same hook) must already be registered when this runs.
+	 *
+	 * @return void
+	 */
+	public static function ensure_pending_reconcile_watchdog() {
+		if ( false === wp_next_scheduled( 'wp_ai_workflows_reconcile_pending_executions' ) ) {
+			wp_schedule_event( time(), 'wp_ai_workflows_5min', 'wp_ai_workflows_reconcile_pending_executions' );
+		}
+	}
+
+	/**
+	 * Sweep executions still 'pending' past a grace period and submit them through
+	 * the same atomic claim run_manual_async() uses, so a doubled claim (a late
+	 * cron event racing this sweep) still never runs a row twice. Only the manual
+	 * REST route ever leaves a row at 'pending' - every other trigger inserts its
+	 * row already 'processing' - so a row found here was never submitted anywhere:
+	 * retrying it is a first submission, not a duplicate.
+	 *
+	 * @return void
+	 */
+	public static function reconcile_stale_pending_executions() {
+		global $wpdb;
+		$executions_table = $wpdb->prefix . 'wp_ai_workflows_executions';
+
+		$grace = max( 30, (int) apply_filters( 'wp_ai_workflows_stale_pending_grace', 60 ) );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, workflow_id FROM %i
+				 WHERE status = 'pending' AND created_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d SECOND )
+				 ORDER BY created_at ASC LIMIT 20",
+				$executions_table,
+				$grace
+			)
+		);
+
+		foreach ( (array) $rows as $row ) {
+			self::run_manual_async(
+				array(
+					'workflow_id'  => $row->workflow_id,
+					'execution_id' => (int) $row->id,
+				)
+			);
+		}
+
+		self::reconcile_stale_cloud_executions();
+	}
+
+	/**
+	 * Re-read Cloud runs that still look in progress here after their poll went
+	 * quiet, so a run that finished on the platform does not stay "processing".
+	 *
+	 * @return void
+	 */
+	private static function reconcile_stale_cloud_executions() {
+		global $wpdb;
+		$executions_table = $wpdb->prefix . 'wp_ai_workflows_executions';
+
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT id FROM %i
+				 WHERE status = 'processing' AND cost_details LIKE %s
+				 AND updated_at < DATE_SUB( UTC_TIMESTAMP(), INTERVAL %d SECOND )
+				 ORDER BY updated_at ASC LIMIT 20",
+				$executions_table,
+				'%platform_execution_id%',
+				120
+			)
+		);
+
+		foreach ( (array) $ids as $id ) {
+			$status = self::sync_cloud_execution( (int) $id );
+			if ( empty( $status['is_complete'] ) ) {
+				$wpdb->update(
+					$executions_table,
+					array( 'updated_at' => current_time( 'mysql', true ) ),
+					array(
+						'id'     => (int) $id,
+						'status' => 'processing',
+					)
+				);
+			}
+		}
+	}
+
 
 	/**
 	 * Submit a workflow to the cloud engine and hand off to the poller. Called from
@@ -1283,32 +1378,15 @@ class WP_AI_Workflows_Workflow {
 			return new WP_Error( 'workflow_not_found', 'Workflow not found' );
 		}
 
-		if ( $workflow['status'] !== 'active' ) {
+		// A workflow row with no status is treated as inactive (fail closed), matching
+		// the fallback used elsewhere for the same optional field (see get_workflows()).
+		$workflow_status = isset( $workflow['status'] ) ? $workflow['status'] : 'inactive';
+		if ( $workflow_status !== 'active' ) {
 			WP_AI_Workflows_Utilities::debug_log( 'Workflow is inactive', 'info', array( 'workflow_id' => $workflow_id ) );
 			return new WP_Error( 'workflow_inactive', 'Workflow is inactive' );
 		}
 
 		$trigger_data = $initial_data;
-
-		if ( $session_id ) {
-			global $wpdb;
-			$sessions_table = $wpdb->prefix . 'wp_ai_workflows_sessions';
-
-			$wpdb->replace(
-				$sessions_table,
-				array(
-					'session_id'  => $session_id,
-					'workflow_id' => $workflow_id,
-					'metadata'    => wp_json_encode(
-						array(
-							'last_execution_id' => $execution_id,
-							'status'            => 'processing',
-						)
-					),
-				),
-				array( '%s', '%s', '%s' )
-			);
-		}
 
 		if ( $execution_id === null ) {
 			$wpdb->insert(
@@ -1366,8 +1444,8 @@ class WP_AI_Workflows_Workflow {
 		global $initial_webhook_data;
 		$initial_webhook_data = $trigger_data;
 
-		$nodes = $workflow['nodes'];
-		$edges = $workflow['edges'];
+		$nodes = isset( $workflow['nodes'] ) && is_array( $workflow['nodes'] ) ? $workflow['nodes'] : array();
+		$edges = isset( $workflow['edges'] ) && is_array( $workflow['edges'] ) ? $workflow['edges'] : array();
 
 		$sorted_nodes = self::topological_sort( $nodes, $edges );
 
@@ -1698,13 +1776,16 @@ class WP_AI_Workflows_Workflow {
 			);
 		}
 
-		foreach ( $workflow['nodes'] as &$node ) {
-			if ( isset( $node_data[ $node['id'] ] ) ) {
-				$node['data']['output']   = $node_data[ $node['id'] ]['content'];
-				$node['data']['executed'] = true;
-			} else {
-				$node['data']['executed'] = false;
+		if ( isset( $workflow['nodes'] ) && is_array( $workflow['nodes'] ) ) {
+			foreach ( $workflow['nodes'] as &$node ) {
+				if ( isset( $node_data[ $node['id'] ] ) ) {
+					$node['data']['output']   = $node_data[ $node['id'] ]['content'];
+					$node['data']['executed'] = true;
+				} else {
+					$node['data']['executed'] = false;
+				}
 			}
+			unset( $node );
 		}
 		$workflow['lastExecuted'] = current_time( 'mysql', true );
 
@@ -3250,21 +3331,29 @@ class WP_AI_Workflows_Workflow {
 	}
 
 	public function handle_user_login_trigger( $user_login, $user ) {
-		$trigger_data = array(
-			'user_login' => $user_login,
-			'userRole'   => $user->roles[0],
-			'user_data'  => $user,
-		);
-
+		// Cron args are stored in wp_options and can be logged on failure, so
+		// only the user ID is scheduled; process_login_trigger() rehydrates
+		// the rest and never carries credential fields onward.
 		wp_schedule_single_event(
 			time(),
 			'wp_ai_workflows_process_login_trigger',
-			array( 'trigger_data' => $trigger_data )
+			array( 'trigger_data' => array( 'user_id' => (int) $user->ID ) )
 		);
 	}
 
 	public function process_login_trigger( $trigger_data ) {
-		$this->handle_wp_core_trigger( 'wp_login', $trigger_data );
+		$user = ! empty( $trigger_data['user_id'] ) ? get_userdata( (int) $trigger_data['user_id'] ) : false;
+		if ( ! $user ) {
+			return;
+		}
+
+		$this->handle_wp_core_trigger(
+			'wp_login',
+			array(
+				'user_login' => $user->user_login,
+				'userRole'   => ! empty( $user->roles ) ? $user->roles[0] : '',
+			)
+		);
 	}
 
 

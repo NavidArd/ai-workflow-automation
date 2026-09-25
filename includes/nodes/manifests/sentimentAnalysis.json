@@ -6,6 +6,7 @@
   "capabilities": ["sentiment classification", "text analysis"],
   "modes": ["local", "cloud"],
   "credits": 1,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "Text to analyze for sentiment." }

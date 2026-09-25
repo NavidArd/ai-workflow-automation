@@ -6,6 +6,7 @@
   "capabilities": ["long-form article generation", "content writing"],
   "modes": ["local", "cloud"],
   "credits": 3,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "Article topic and writing instructions." },

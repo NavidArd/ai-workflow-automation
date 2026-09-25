@@ -99,7 +99,7 @@ class WP_AI_Workflows_Generator {
 
 		$prompts_dir = dirname( $this->prompt_path );
 		if ( ! file_exists( $prompts_dir ) ) {
-			mkdir( $prompts_dir, 0755, true );
+			wp_mkdir_p( $prompts_dir );
 		}
 
 		if ( ! copy( $this->template_path, $this->prompt_path ) ) {
@@ -309,11 +309,12 @@ class WP_AI_Workflows_Generator {
 		$response = wp_remote_post(
 			'https://openrouter.ai/api/v1/chat/completions',
 			array(
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $api_key,
-					'Content-Type'  => 'application/json',
-					'HTTP-Referer'  => get_site_url(),
-					'X-Title'       => 'WP AI Workflow Generator',
+				'headers' => array_merge(
+					array(
+						'Authorization' => 'Bearer ' . $api_key,
+						'Content-Type'  => 'application/json',
+					),
+					WP_AI_Workflows_Utilities::openrouter_headers()
 				),
 				'body'    => wp_json_encode( $body ),
 				'timeout' => isset( $args['timeout'] ) ? $args['timeout'] : 120,
@@ -321,6 +322,7 @@ class WP_AI_Workflows_Generator {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- returned as JSON via WP_Error, not echoed as HTML
 			throw new Exception( 'API request failed: ' . $response->get_error_message() );
 		}
 
@@ -2204,7 +2206,7 @@ PROMPT;
 	public function refresh_prompt() {
 		$this->clear_prompt_cache();
 		if ( file_exists( $this->prompt_path ) ) {
-			unlink( $this->prompt_path );
+			wp_delete_file( $this->prompt_path );
 		}
 		$this->ensure_system_prompt();
 	}

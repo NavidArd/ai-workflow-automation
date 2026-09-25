@@ -216,7 +216,7 @@ class WP_AI_Workflows_Cost_Management {
 		}
 
 		$monthly_totals = get_option( 'wp_ai_workflows_multimedia_costs', array() );
-		$month_key      = date( 'Y-m' );
+		$month_key      = gmdate( 'Y-m' );
 
 		if ( ! isset( $monthly_totals[ $month_key ] ) ) {
 			$monthly_totals[ $month_key ] = array(
@@ -289,8 +289,9 @@ class WP_AI_Workflows_Cost_Management {
 				'https://openrouter.ai/api/v1/models',
 				array(
 					'timeout' => 15,
-					'headers' => array(
-						'Content-Type' => 'application/json',
+					'headers' => array_merge(
+						array( 'Content-Type' => 'application/json' ),
+						WP_AI_Workflows_Utilities::openrouter_headers()
 					),
 				)
 			);
@@ -607,6 +608,15 @@ class WP_AI_Workflows_Cost_Management {
 	 * Update execution total cost
 	 */
 	private function update_execution_total_cost( $execution_id ) {
+		if ( empty( $execution_id ) ) {
+			return;
+		}
+
+		// A site step has no local execution row of its own.
+		if ( class_exists( 'WP_AI_Workflows_Site_Step' ) && WP_AI_Workflows_Site_Step::is_running_step() ) {
+			return;
+		}
+
 		global $wpdb;
 
 		$total_cost = $wpdb->get_var(

@@ -6,6 +6,7 @@
   "capabilities": ["HTTP requests", "authentication (basic/bearer/apiKey)", "retries", "JSONPath extraction", "response caching"],
   "modes": ["local", "cloud"],
   "credits": 1,
+  "locus": "either",
   "config": [
     { "name": "url", "type": "string", "required": true, "supportsVariables": true, "description": "API endpoint URL." },
     { "name": "method", "type": "enum", "required": true, "default": "GET",

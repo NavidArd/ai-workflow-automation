@@ -6,6 +6,7 @@
   "capabilities": ["single-page scraping", "site crawling", "URL discovery (map)", "web/news/image search", "agent structured extraction", "markdown/html/json/question/highlights output"],
   "modes": ["local", "cloud"],
   "credits": 5,
+  "locus": "either",
   "config": [
     { "name": "operation", "type": "enum", "required": true, "default": "scrape",
       "options": ["scrape", "crawl", "map", "search", "agent"],

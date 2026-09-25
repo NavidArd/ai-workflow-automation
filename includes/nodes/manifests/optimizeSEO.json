@@ -6,6 +6,7 @@
   "capabilities": ["SEO optimization", "keyword targeting", "content rewriting"],
   "modes": ["local", "cloud"],
   "credits": 2,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "Text content to optimize." },

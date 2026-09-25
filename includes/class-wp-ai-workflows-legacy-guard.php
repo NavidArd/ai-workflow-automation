@@ -230,7 +230,7 @@ class WP_AI_Workflows_Legacy_Guard {
 		echo '<div class="notice notice-success is-dismissible"><p>';
 		echo esc_html__(
 			'AI Workflow Automation: an older version (Lite or Pro) was deactivated automatically. Your workflows and settings are intact. You can safely remove the old plugin folder from wp-content/plugins via FTP; avoid its Delete button on the Plugins screen.',
-			'wp-ai-workflows'
+			'ai-workflow-automation-lite'
 		);
 		echo '</p></div>';
 	}
@@ -247,7 +247,7 @@ class WP_AI_Workflows_Legacy_Guard {
 		echo '<div class="notice notice-warning is-dismissible"><p>';
 		echo esc_html__(
 			'AI Workflow Automation: another copy of this plugin (an older Lite or Pro version) is already active, so this copy did not load. The older copy is being deactivated automatically. Your workflows and settings are intact.',
-			'wp-ai-workflows'
+			'ai-workflow-automation-lite'
 		);
 		echo '</p></div>';
 	}

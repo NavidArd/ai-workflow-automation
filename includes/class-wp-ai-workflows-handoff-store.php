@@ -10,7 +10,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -74,7 +74,7 @@ class WP_AI_Workflows_Handoff_Store {
 				UNIQUE KEY session_id (session_id),
 				KEY provider_ref (provider, external_ref),
 				KEY mode (mode)
-			) " . $charset_collate,
+			) " . $charset_collate, // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name is passed as %i; charset comes from $wpdb->get_charset_collate().
 			$this->table
 		);
 

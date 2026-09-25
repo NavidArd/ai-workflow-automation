@@ -10,7 +10,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -105,7 +105,7 @@ class WP_AI_Workflows_Agent_Credit_Meter {
 		// Fail closed BEFORE spending: a runaway agent cannot outspend its run cap.
 		if ( $this->charged >= $this->run_cap ) {
 			throw new WP_AI_Workflows_Agent_Credit_Exception(
-				WP_AI_Workflows_Agent_Credit_Exception::REASON_CAP,
+				esc_html( WP_AI_Workflows_Agent_Credit_Exception::REASON_CAP ),
 				esc_html( 'This agent run reached its per-run credit limit and was stopped.' )
 			);
 		}
@@ -136,7 +136,7 @@ class WP_AI_Workflows_Agent_Credit_Meter {
 			// 402 insufficient credits -> hard stop with a top-up message. NEVER BYOK.
 			if ( 'platform_credits' === $data->get_error_code() ) {
 				throw new WP_AI_Workflows_Agent_Credit_Exception(
-					WP_AI_Workflows_Agent_Credit_Exception::REASON_INSUFFICIENT,
+					esc_html( WP_AI_Workflows_Agent_Credit_Exception::REASON_INSUFFICIENT ),
 					esc_html( 'You are out of credits for this agent run. Please top up to continue.' )
 				);
 			}

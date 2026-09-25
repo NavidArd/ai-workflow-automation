@@ -6,6 +6,7 @@
   "capabilities": ["send email", "HTML or plain text", "cc/bcc", "attachments", "scheduled delay"],
   "modes": ["local", "cloud"],
   "credits": 1,
+  "locus": "site",
   "config": [
     { "name": "to", "type": "string", "required": true, "supportsVariables": true, "description": "Recipient email address." },
     { "name": "cc", "type": "string", "required": false, "supportsVariables": true, "description": "CC recipients." },

@@ -812,11 +812,12 @@ class WP_AI_Workflows_Chat_Handler {
 		$response = wp_remote_post(
 			'https://openrouter.ai/api/v1/chat/completions',
 			array(
-				'headers' => array(
-					'Content-Type'  => 'application/json',
-					'Authorization' => 'Bearer ' . $api_key,
-					'HTTP-Referer'  => get_site_url(),
-					'X-Title'       => 'WP AI Workflows',
+				'headers' => array_merge(
+					array(
+						'Content-Type'  => 'application/json',
+						'Authorization' => 'Bearer ' . $api_key,
+					),
+					WP_AI_Workflows_Utilities::openrouter_headers()
 				),
 				'body'    => wp_json_encode( $data ),
 				'timeout' => 60,
@@ -864,11 +865,12 @@ class WP_AI_Workflows_Chat_Handler {
 		$response = wp_remote_post(
 			'https://openrouter.ai/api/v1/chat/completions',
 			array(
-				'headers' => array(
-					'Content-Type'  => 'application/json',
-					'Authorization' => 'Bearer ' . $api_key,
-					'HTTP-Referer'  => get_site_url(),
-					'X-Title'       => 'WP AI Workflows',
+				'headers' => array_merge(
+					array(
+						'Content-Type'  => 'application/json',
+						'Authorization' => 'Bearer ' . $api_key,
+					),
+					WP_AI_Workflows_Utilities::openrouter_headers()
 				),
 				'body'    => wp_json_encode( $data ),
 				'timeout' => 60,
@@ -978,23 +980,6 @@ class WP_AI_Workflows_Chat_Handler {
 					'timestamp'    => time(),
 				),
 				3600
-			);
-
-			global $wpdb;
-			$sessions_table = $wpdb->prefix . 'wp_ai_workflows_sessions';
-			
-			$result = $wpdb->query(
-				$wpdb->prepare(
-					"UPDATE %i SET metadata = %s WHERE session_id = %s",
-					$sessions_table,
-					wp_json_encode(
-						array(
-							'status'       => 'processing',
-							'execution_id' => $execution_id,
-						)
-					),
-					$this->session->get_session_id()
-				)
 			);
 		}
 
@@ -1972,11 +1957,12 @@ class WP_AI_Workflows_Chat_Handler {
 			$endpoint = 'https://openrouter.ai/api/v1/chat/completions';
 			$api_key  = WP_AI_Workflows_Utilities::get_openrouter_api_key();
 			$model    = $this->model;
-			$headers  = array(
-				'Content-Type'  => 'application/json',
-				'Authorization' => 'Bearer ' . $api_key,
-				'HTTP-Referer'  => get_site_url(),
-				'X-Title'       => 'WP AI Workflows',
+			$headers  = array_merge(
+				array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $api_key,
+				),
+				WP_AI_Workflows_Utilities::openrouter_headers()
 			);
 		} else {
 			$endpoint = 'https://api.openai.com/v1/chat/completions';
@@ -2173,19 +2159,14 @@ class WP_AI_Workflows_Chat_Handler {
 	}
 
 	/**
-	 * Apply security hardening to a streaming cURL handle.
-	 *
-	 * Enforces TLS certificate verification explicitly (never trust defaults for
-	 * something transmitting API keys) and honours WordPress proxy configuration
-	 * (WP_PROXY_HOST etc.) so streaming requests behave like the rest of the
-	 * plugin's HTTP traffic. Kept in one place so both streaming providers share
-	 * identical, auditable transport security.
+	 * Apply TLS verification and WordPress proxy settings to a streaming cURL handle.
 	 *
 	 * @param resource|\CurlHandle $ch      cURL handle.
 	 * @param string               $target_url Destination URL (for proxy bypass checks).
 	 * @return void
 	 */
 	private function harden_streaming_curl( $ch, $target_url ) {
+		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_setopt -- Hardens the cURL handle used for SSE streaming, which needs a write callback the WordPress HTTP API does not provide.
 		// Explicit TLS verification - do not rely on libcurl defaults.
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, true );
 		curl_setopt( $ch, CURLOPT_SSL_VERIFYHOST, 2 );
@@ -2202,18 +2183,14 @@ class WP_AI_Workflows_Chat_Handler {
 				}
 			}
 		}
+		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_setopt
 	}
 
 	/**
 	 * Stream OpenAI response using the Responses API (Server-Sent Events).
-	 *
-	 * Uses raw cURL rather than the WordPress HTTP API on purpose: wp_remote_*
-	 * buffers the entire response body before returning, which makes real-time
-	 * SSE token streaming to the browser impossible. cURL's CURLOPT_WRITEFUNCTION
-	 * lets us forward each chunk as it arrives. Transport security is applied via
-	 * harden_streaming_curl() (explicit TLS verification + WP proxy support).
 	 */
 	private function stream_openai_response( $messages ) {
+		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init, WordPress.WP.AlternativeFunctions.curl_curl_setopt, WordPress.WP.AlternativeFunctions.curl_curl_exec, WordPress.WP.AlternativeFunctions.curl_curl_getinfo, WordPress.WP.AlternativeFunctions.curl_curl_error, WordPress.WP.AlternativeFunctions.curl_curl_close -- SSE streaming needs a write callback, which the WordPress HTTP API does not provide.
 		$api_key = WP_AI_Workflows_Utilities::get_openai_api_key();
 		if ( empty( $api_key ) ) {
 			throw new Exception( 'No OpenAI API key is configured. Add one in Settings, or switch this chatbot to Credits (keyless).' );
@@ -2394,6 +2371,7 @@ class WP_AI_Workflows_Chat_Handler {
 		}
 
 		exit;
+		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_init, WordPress.WP.AlternativeFunctions.curl_curl_setopt, WordPress.WP.AlternativeFunctions.curl_curl_exec, WordPress.WP.AlternativeFunctions.curl_curl_getinfo, WordPress.WP.AlternativeFunctions.curl_curl_error, WordPress.WP.AlternativeFunctions.curl_curl_close
 	}
 
 	/**
@@ -2459,14 +2437,9 @@ class WP_AI_Workflows_Chat_Handler {
 
 	/**
 	 * Stream OpenRouter response (Server-Sent Events).
-	 *
-	 * Uses raw cURL rather than the WordPress HTTP API on purpose: wp_remote_*
-	 * buffers the full body before returning, so real-time SSE token streaming to
-	 * the browser is not possible through it. cURL's CURLOPT_WRITEFUNCTION lets us
-	 * forward each chunk as it arrives. Transport security is applied via
-	 * harden_streaming_curl() (explicit TLS verification + WP proxy support).
 	 */
 	private function stream_openrouter_response( $messages ) {
+		// phpcs:disable WordPress.WP.AlternativeFunctions.curl_curl_init, WordPress.WP.AlternativeFunctions.curl_curl_setopt, WordPress.WP.AlternativeFunctions.curl_curl_exec, WordPress.WP.AlternativeFunctions.curl_curl_close -- SSE streaming needs a write callback, which the WordPress HTTP API does not provide.
 		$api_key = WP_AI_Workflows_Utilities::get_openrouter_api_key();
 		if ( empty( $api_key ) ) {
 			throw new Exception( 'No OpenRouter API key is configured. Add one in Settings, or switch this chatbot to Credits (keyless).' );
@@ -2515,14 +2488,15 @@ class WP_AI_Workflows_Chat_Handler {
 		curl_setopt( $ch, CURLOPT_RETURNTRANSFER, true );
 		curl_setopt( $ch, CURLOPT_POST, true );
 		curl_setopt( $ch, CURLOPT_POSTFIELDS, json_encode( $data ) );
+		$openrouter_headers = WP_AI_Workflows_Utilities::openrouter_headers();
 		curl_setopt(
 			$ch,
 			CURLOPT_HTTPHEADER,
 			array(
 				'Content-Type: application/json',
 				'Authorization: Bearer ' . $api_key,
-				'HTTP-Referer: ' . get_site_url(),
-				'X-Title: WP AI Workflows',
+				'HTTP-Referer: ' . $openrouter_headers['HTTP-Referer'],
+				'X-Title: ' . $openrouter_headers['X-Title'],
 			)
 		);
 		curl_setopt( $ch, CURLOPT_TIMEOUT, 180 );
@@ -2651,6 +2625,7 @@ class WP_AI_Workflows_Chat_Handler {
 		curl_close( $ch );
 
 		exit;
+		// phpcs:enable WordPress.WP.AlternativeFunctions.curl_curl_init, WordPress.WP.AlternativeFunctions.curl_curl_setopt, WordPress.WP.AlternativeFunctions.curl_curl_exec, WordPress.WP.AlternativeFunctions.curl_curl_close
 	}
 
 	/**

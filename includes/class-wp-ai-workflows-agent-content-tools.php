@@ -13,7 +13,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -204,7 +204,7 @@ class WP_AI_Workflows_Agent_Content_Tools {
 			'url'      => $url ? esc_url_raw( $url ) : '',
 			'buttons'  => array(
 				array(
-					'label'  => __( 'Read', 'wp-ai-workflows' ),
+					'label'  => __( 'Read', 'ai-workflow-automation-lite' ),
 					'action' => 'link',
 					'value'  => $url ? esc_url_raw( $url ) : '',
 				),
@@ -409,13 +409,13 @@ class WP_AI_Workflows_Agent_Content_Tools {
 		// products need variation selection, which happens on the product page).
 		if ( $product->is_type( 'simple' ) && $product->is_purchasable() && $product->is_in_stock() ) {
 			$buttons[] = array(
-				'label'  => __( 'Add to cart', 'wp-ai-workflows' ),
+				'label'  => __( 'Add to cart', 'ai-workflow-automation-lite' ),
 				'action' => 'add_to_cart',
 				'value'  => (string) $id,
 			);
 		}
 		$buttons[] = array(
-			'label'  => __( 'View', 'wp-ai-workflows' ),
+			'label'  => __( 'View', 'ai-workflow-automation-lite' ),
 			'action' => 'link',
 			'value'  => $url ? esc_url_raw( $url ) : '',
 		);

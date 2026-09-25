@@ -6,6 +6,7 @@
   "capabilities": ["structured data extraction", "field extraction", "list extraction"],
   "modes": ["local", "cloud"],
   "credits": 2,
+  "locus": "either",
   "config": [
     { "name": "content", "type": "string", "required": true, "supportsVariables": true,
       "description": "Source text to extract from." },

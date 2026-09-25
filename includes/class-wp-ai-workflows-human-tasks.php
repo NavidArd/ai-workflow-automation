@@ -145,27 +145,34 @@ class WP_AI_Workflows_Human_Tasks {
 			return false;
 		}
 
-		$workflows_table = $wpdb->prefix . 'wp_ai_workflows';
-		$workflow_name   = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT name FROM %i WHERE id = %s",
-				$workflows_table,
-				$workflow_id
-			)
-		);
-
-		if ( ! $workflow_name ) {
-			$executions_table = $wpdb->prefix . 'wp_ai_workflows_executions';
-			$workflow_name    = $wpdb->get_var(
+		// A caller that already knows the real workflow identity (e.g. a Cloud
+		// site-step dispatch, which has no local workflow row to look up) passes
+		// workflow_name directly. Only fall back to the id lookups below when it
+		// didn't, so a resolved id from one caller's id space is never matched
+		// against a table that uses a different one.
+		if ( ! isset( $data['workflow_name'] ) || '' === $data['workflow_name'] ) {
+			$workflows_table = $wpdb->prefix . 'wp_ai_workflows';
+			$workflow_name   = $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT workflow_name FROM %i WHERE id = %d",
-					$executions_table,
+					"SELECT name FROM %i WHERE id = %s",
+					$workflows_table,
 					$workflow_id
 				)
 			);
-		}
 
-		$data['workflow_name'] = $workflow_name ? $workflow_name : 'Unknown Workflow';
+			if ( ! $workflow_name ) {
+				$executions_table = $wpdb->prefix . 'wp_ai_workflows_executions';
+				$workflow_name    = $wpdb->get_var(
+					$wpdb->prepare(
+						"SELECT workflow_name FROM %i WHERE id = %d",
+						$executions_table,
+						$workflow_id
+					)
+				);
+			}
+
+			$data['workflow_name'] = $workflow_name ? $workflow_name : 'Unknown Workflow';
+		}
 
 		if ( ! isset( $data['content'] ) || $data['content'] === '' ) {
 			$data['content'] = 'No content provided';
@@ -338,6 +345,7 @@ class WP_AI_Workflows_Human_Tasks {
 
 		$site_name = get_bloginfo( 'name' );
 		$admin_url = admin_url( 'admin.php?page=wp-ai-workflows-tasks' );
+		$footer_logo_url = plugins_url( 'images/AWAIcon.png', WP_AI_WORKFLOWS_PLUGIN_DIR . 'wp-ai-workflows.php' );
 
 			$content_display = 'No content provided';
 		if ( isset( $task['content'] ) && ! is_null( $task['content'] ) ) {
@@ -455,7 +463,7 @@ class WP_AI_Workflows_Human_Tasks {
                                 <!-- Footer -->
                                 <tr>
                                     <td align="center" style="padding: 30px;">
-                                        <img src=" https://wpaiworkflowautomation.com/wp-content/uploads/2024/09/Logowpaiwfau300.png " alt="' . esc_attr( $site_name ) . '" width="24" height="24" style="display: block; margin-bottom: 10px;">
+                                        <img src="' . esc_url( $footer_logo_url ) . '" alt="' . esc_attr( $site_name ) . '" width="24" height="24" style="display: block; margin-bottom: 10px;">
                                         <p style="color: #86868B; font-size: 13px; margin: 0;">Powered by AI Workflow Automation WordPress Plugin</p>
                                     </td>
                                 </tr>

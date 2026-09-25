@@ -301,7 +301,7 @@ class WP_AI_Workflows_Encryption {
 	 */
 	public static function render_openssl_notice() {
 		echo '<div class="notice notice-error"><p><strong>AI Workflow Automation:</strong> '
-			. esc_html__( 'The PHP OpenSSL extension is not available, so API keys and credentials cannot be stored securely. Please enable OpenSSL to save sensitive settings.', 'wp-ai-workflows' )
+			. esc_html__( 'The PHP OpenSSL extension is not available, so API keys and credentials cannot be stored securely. Please enable OpenSSL to save sensitive settings.', 'ai-workflow-automation-lite' )
 			. '</p></div>';
 	}
 }

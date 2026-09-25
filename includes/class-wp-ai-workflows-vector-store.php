@@ -516,7 +516,7 @@ class WP_AI_Workflows_Vector_Store {
 			$this->call_openai_api( 'DELETE', "vector_stores/{$file->store_id}/files/{$file_id}" );
 
 			if ( ! empty( $file->local_path ) && file_exists( $file->local_path ) ) {
-				unlink( $file->local_path );
+				wp_delete_file( $file->local_path );
 			}
 
 			$result = $wpdb->delete( $this->files_table, array( 'id' => $file_id ) );
@@ -766,7 +766,7 @@ class WP_AI_Workflows_Vector_Store {
 
 				$post_content = $post->post_content;
 				$post_content = apply_filters( 'the_content', $post_content );
-				$post_content = strip_tags( $post_content );
+				$post_content = wp_strip_all_tags( $post_content );
 
 				$post_url = get_permalink( $post_id );
 
@@ -893,7 +893,7 @@ class WP_AI_Workflows_Vector_Store {
 					)
 				);
 
-				@unlink( $temp_file );
+				wp_delete_file( $temp_file );
 
 				if ( $result === false ) {
 					throw new Exception( 'Failed to save file metadata to database' );

@@ -58,11 +58,11 @@ class WP_AI_Workflows_Admin {
 
 		printf(
 			'<div class="notice notice-success is-dismissible wpaw-welcome-notice"><p>%1$s <a href="%2$s"><strong>%3$s</strong></a> <a href="%4$s">%5$s</a></p></div>',
-			esc_html__( 'AI Workflow Automation is ready. Build your first automation, or claim 50 free cloud credits.', 'wp-ai-workflows' ),
+			esc_html__( 'AI Workflow Automation is ready. Build your first automation, or claim 50 free cloud credits.', 'ai-workflow-automation-lite' ),
 			esc_url( $open_url ),
-			esc_html__( 'Open AI Workflows', 'wp-ai-workflows' ),
+			esc_html__( 'Open AI Workflows', 'ai-workflow-automation-lite' ),
 			esc_url( $dismiss_url ),
-			esc_html__( 'Dismiss', 'wp-ai-workflows' )
+			esc_html__( 'Dismiss', 'ai-workflow-automation-lite' )
 		);
 	}
 
@@ -122,21 +122,21 @@ class WP_AI_Workflows_Admin {
 						<?php
 						printf(
 							'<strong>%1$s</strong> %2$s %3$s. %4$s',
-							esc_html__( 'Share anonymous usage data.', 'wp-ai-workflows' ),
-							esc_html__( 'Send anonymous usage events such as "created a workflow" so we can see where people get stuck: never your content, prompts, API keys, email address or site name.', 'wp-ai-workflows' ),
+							esc_html__( 'Share anonymous usage data.', 'ai-workflow-automation-lite' ),
+							esc_html__( 'Send anonymous usage events such as "created a workflow" so we can see where people get stuck: never your content, prompts, API keys, email address or site name.', 'ai-workflow-automation-lite' ),
 							sprintf(
 								'<a href="%1$s" target="_blank" rel="noopener noreferrer">%2$s</a>',
 								esc_url( 'https://wpaiworkflowautomation.com/privacy-policy/' ),
-								esc_html__( 'Privacy policy', 'wp-ai-workflows' )
+								esc_html__( 'Privacy policy', 'ai-workflow-automation-lite' )
 							),
-							esc_html__( 'You can change this any time in Settings.', 'wp-ai-workflows' )
+							esc_html__( 'You can change this any time in Settings.', 'ai-workflow-automation-lite' )
 						);
 						?>
 					</label>
 				</p>
 				<p>
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Save choice', 'wp-ai-workflows' ); ?></button>
-					<button type="submit" name="dismiss" value="1" class="button-link"><?php esc_html_e( 'Not now', 'wp-ai-workflows' ); ?></button>
+					<button type="submit" class="button button-primary"><?php esc_html_e( 'Save choice', 'ai-workflow-automation-lite' ); ?></button>
+					<button type="submit" name="dismiss" value="1" class="button-link"><?php esc_html_e( 'Not now', 'ai-workflow-automation-lite' ); ?></button>
 				</p>
 			</form>
 		</div>
@@ -150,7 +150,7 @@ class WP_AI_Workflows_Admin {
 	 */
 	public function handle_analytics_notice_choice() {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'wp-ai-workflows' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'ai-workflow-automation-lite' ), '', array( 'response' => 403 ) );
 		}
 		check_admin_referer( self::ANALYTICS_NOTICE_ACTION );
 
@@ -498,14 +498,14 @@ class WP_AI_Workflows_Admin {
 
 		$placeholders = implode( ', ', array_fill( 0, count( $user_roles ), '%s' ) );
 
-		$query = $wpdb->prepare(
-			"SELECT COUNT(*) FROM $table_name 
-            WHERE (assigned_user_id = %d OR (assigned_role IN ($placeholders) AND assigned_role IS NOT NULL)) 
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM %i
+            WHERE (assigned_user_id = %d OR (assigned_role IN ($placeholders) AND assigned_role IS NOT NULL))
             AND status = %s",
-			array_merge( array( $user_id ), $user_roles, array( 'pending' ) )
+				array_merge( array( $table_name, $user_id ), $user_roles, array( 'pending' ) )
+			)
 		);
-
-		$count = (int) $wpdb->get_var( $query );
 
 		return $count;
 	}

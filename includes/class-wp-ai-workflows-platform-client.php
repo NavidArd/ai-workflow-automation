@@ -22,6 +22,16 @@ class WP_AI_Workflows_Platform_Client {
 	const OPTION_CONNECTION = 'wpaw_platform_connection';
 
 	/**
+	 * Option: the previous encrypted `wpaw_` key kept for a bounded window after a
+	 * rotation, so work already in flight under the old key still settles.
+	 * Shape: {key: <encrypted>, prefix: <string>, until: <unix seconds>}.
+	 */
+	const OPTION_PREVIOUS_KEY = 'wpaw_platform_prev_key';
+
+	/** How long a rotated-out key stays acceptable. */
+	const KEY_ROTATION_WINDOW = DAY_IN_SECONDS;
+
+	/**
 	 * LEGACY: site-wide transient that once held the encrypted account JWT (replaced
 	 * by per-WP-user meta USERMETA_JWT). Kept only to delete stale data from older
 	 * builds.
@@ -90,6 +100,9 @@ class WP_AI_Workflows_Platform_Client {
 
 	/** Short mutex so an inline status-poll run and the cron run never double-redeem. */
 	const LOCK_AUTO_REDEEM = 'wpaw_auto_redeem_lock';
+
+	/** Upper bound (bytes) on a rendered PDF fetched back from the platform. */
+	const PDF_FETCH_MAX_BYTES = 20971520; // 20 MB.
 
 	/**
 	 * Register hooks. Called once from run_wp_ai_workflows(). Kept minimal - the
@@ -165,6 +178,16 @@ class WP_AI_Workflows_Platform_Client {
 	 * @return string 'Bearer wpaw_…' or '' .
 	 */
 	public static function get_update_authorization_header() {
+		return self::get_authorization_header();
+	}
+
+	/**
+	 * Bearer header carrying the site key for an outbound platform call. '' when
+	 * disconnected or on decrypt failure; the key never leaves the server.
+	 *
+	 * @return string 'Bearer wpaw_…' or ''.
+	 */
+	public static function get_authorization_header() {
 		if ( ! self::is_connected() ) {
 			return '';
 		}
@@ -202,6 +225,52 @@ class WP_AI_Workflows_Platform_Client {
 	public static function get_key_prefix() {
 		$meta = get_option( self::OPTION_CONNECTION, array() );
 		return isset( $meta['keyPrefix'] ) ? (string) $meta['keyPrefix'] : '';
+	}
+
+	/**
+	 * The record of the key this site rotated away from, while it is still inside
+	 * the rotation window. Empty array once the window has passed.
+	 *
+	 * @return array{key?:string,prefix?:string,until?:int}
+	 */
+	private static function get_previous_key_record() {
+		$record = get_option( self::OPTION_PREVIOUS_KEY, array() );
+		if ( ! is_array( $record ) || empty( $record['key'] ) || empty( $record['until'] ) ) {
+			return array();
+		}
+		if ( time() > (int) $record['until'] ) {
+			delete_option( self::OPTION_PREVIOUS_KEY );
+			return array();
+		}
+		return $record;
+	}
+
+	/**
+	 * The keyPrefix this site rotated away from, while it is still acceptable.
+	 *
+	 * @return string
+	 */
+	public static function get_previous_key_prefix() {
+		$record = self::get_previous_key_record();
+		return isset( $record['prefix'] ) ? (string) $record['prefix'] : '';
+	}
+
+	/**
+	 * The callback secret derived from the key this site rotated away from, while
+	 * it is still acceptable. '' when there is none.
+	 *
+	 * @return string
+	 */
+	public static function get_previous_callback_secret() {
+		$record = self::get_previous_key_record();
+		if ( empty( $record['key'] ) ) {
+			return '';
+		}
+		$plain = WP_AI_Workflows_Encryption::decrypt( $record['key'] );
+		if ( false === $plain || '' === $plain ) {
+			return '';
+		}
+		return hash_hmac( 'sha256', 'wpaw-callback-v1', hash( 'sha256', (string) $plain ) );
 	}
 
 	/**
@@ -300,6 +369,7 @@ class WP_AI_Workflows_Platform_Client {
 	public static function mark_disconnected( $reason = 'manual' ) {
 		delete_option( self::OPTION_API_KEY );
 		delete_option( self::OPTION_CONNECTION );
+		delete_option( self::OPTION_PREVIOUS_KEY );
 		// Site key is gone - drop every WP user's management JWT (cross-user purge)
 		// plus any legacy transient.
 		delete_metadata( 'user', 0, self::USERMETA_JWT, '', true );
@@ -1702,18 +1772,19 @@ class WP_AI_Workflows_Platform_Client {
 			);
 		}
 
-		// Pre-flight: a definition with wpAction nodes (post/save_output callbacks)
-		// can only succeed if the cloud can reach this site. Block at submit time
-		// with a clear message instead of burning credits on a socket error later.
+		// Pre-flight: a definition with a step that runs on this site can only
+		// succeed if the cloud can reach the site back. Block at submit time with a
+		// clear message instead of burning credits on a socket error later.
 		// Filterable for tunneled dev setups - see callback_preflight_error().
-		$has_wp_action = false;
+		$needs_site = false;
 		foreach ( $translated['definition']['nodes'] as $translated_node ) {
-			if ( isset( $translated_node['type'] ) && 'wpAction' === $translated_node['type'] ) {
-				$has_wp_action = true;
+			$type = isset( $translated_node['type'] ) ? $translated_node['type'] : '';
+			if ( 'wpAction' === $type || WP_AI_Workflows_Workflow_Translator::SITE_STEP_TYPE === $type ) {
+				$needs_site = true;
 				break;
 			}
 		}
-		if ( $has_wp_action ) {
+		if ( $needs_site ) {
 			$preflight = self::callback_preflight_error();
 			if ( $preflight instanceof WP_Error ) {
 				return $preflight;
@@ -1745,6 +1816,37 @@ class WP_AI_Workflows_Platform_Client {
 			return new WP_Error( 'platform_invalid_response', 'Cloud submission did not return an execution id.', array( 'status' => 502 ) );
 		}
 		self::invalidate_credits_cache();
+		return $data;
+	}
+
+	/**
+	 * Ask the platform what a Cloud run of this definition would cost, and how it
+	 * splits between the cloud and the site. Advisory: the reservation taken at
+	 * submit time is what is actually charged.
+	 *
+	 * @param array $definition Translated cloud definition.
+	 * @return array|WP_Error {estimatedCredits, baseCredits, cloudSteps, siteSteps, allSite, nodes}
+	 */
+	public static function estimate_workflow( array $definition ) {
+		$result = self::request(
+			'POST',
+			'/api/v1/execute/estimate',
+			array(
+				'auth'    => 'wpaw',
+				'timeout' => 10,
+				'retries' => 0,
+				'body'    => array( 'definition' => $definition ),
+				'context' => 'estimate_workflow',
+			)
+		);
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$data = isset( $result['data'] ) && is_array( $result['data'] ) ? $result['data'] : array();
+		if ( ! isset( $data['estimatedCredits'] ) ) {
+			return new WP_Error( 'platform_invalid_response', 'The estimate did not come back.', array( 'status' => 502 ) );
+		}
 		return $data;
 	}
 
@@ -1991,6 +2093,59 @@ class WP_AI_Workflows_Platform_Client {
 
 		// Preview is free - DO NOT touch the credits cache.
 		return $data;
+	}
+
+	/**
+	 * Fetch the bytes of a PDF this site rendered with render_pdf().
+	 *
+	 * @param string $file_id Platform file id, as returned in render_pdf()'s `fileId`.
+	 * @return string|WP_Error Raw PDF bytes, or WP_Error on any failure.
+	 */
+	public static function fetch_pdf_bytes( $file_id ) {
+		$file_id = (string) $file_id;
+		if ( ! preg_match( '/^[A-Za-z0-9_-]{8,100}$/', $file_id ) ) {
+			return new WP_Error( 'platform_invalid_request', 'Invalid file id.', array( 'status' => 400 ) );
+		}
+
+		$key = self::get_key();
+		if ( is_wp_error( $key ) ) {
+			return $key;
+		}
+
+		$response = wp_remote_get(
+			self::base_url() . '/api/v1/pdf/files/' . rawurlencode( $file_id ),
+			array(
+				'headers'   => array(
+					'Authorization' => 'Bearer ' . $key,
+					'Accept'        => 'application/pdf',
+				),
+				'timeout'   => 30,
+				'sslverify' => true,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			WP_AI_Workflows_Utilities::debug_log(
+				self::redact( 'PDF file fetch failed: ' . $response->get_error_message() ),
+				'error'
+			);
+			return new WP_Error( 'platform_unreachable', 'The platform is currently unreachable. Please try again shortly.', array( 'status' => 503 ) );
+		}
+
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		if ( 200 !== $code ) {
+			return new WP_Error( 'platform_error', 'The rendered PDF could not be fetched from the platform.', array( 'status' => $code ) );
+		}
+
+		$body = wp_remote_retrieve_body( $response );
+		if ( strlen( $body ) > self::PDF_FETCH_MAX_BYTES ) {
+			return new WP_Error( 'platform_invalid_response', 'The rendered PDF exceeded the maximum allowed size.', array( 'status' => 502 ) );
+		}
+		if ( '%PDF' !== substr( $body, 0, 4 ) ) {
+			return new WP_Error( 'platform_invalid_response', 'The platform did not return a valid PDF file.', array( 'status' => 502 ) );
+		}
+
+		return $body;
 	}
 
 	/* ---------------------------------------------------------------------------
@@ -2748,6 +2903,21 @@ class WP_AI_Workflows_Platform_Client {
 		$data = isset( $result['data'] ) && is_array( $result['data'] ) ? $result['data'] : array();
 		if ( empty( $data['apiKey'] ) ) {
 			return new WP_Error( 'platform_invalid_response', 'Key rotation did not return a new key.', array( 'status' => 502 ) );
+		}
+
+		// Keep the outgoing key acceptable for a bounded window so a step already
+		// running settles instead of failing mid-flight.
+		$outgoing = get_option( self::OPTION_API_KEY, '' );
+		if ( ! empty( $outgoing ) ) {
+			update_option(
+				self::OPTION_PREVIOUS_KEY,
+				array(
+					'key'    => $outgoing,
+					'prefix' => self::get_key_prefix(),
+					'until'  => time() + self::KEY_ROTATION_WINDOW,
+				),
+				false
+			);
 		}
 
 		$stored = self::store_key( $data['apiKey'] );

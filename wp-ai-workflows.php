@@ -3,15 +3,14 @@
  * Plugin Name: AI Workflow Automation
  * Plugin URI: https://wpaiworkflowautomation.com
  * Description: A WordPress plugin for building complex AI-powered workflows and AI agents with a visual interface.
- * Version: 2.0.8
- * Requires at least: 6.2.0
- * Requires PHP: 8.0.0
+ * Version: 2.0.9
+ * Requires at least: 6.2
+ * Requires PHP: 8.0
  * Author: Massive Shift
  * Author URI: https://wpaiworkflowautomation.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: wp-ai-workflows
- * Domain Path: /languages
+ * Text Domain: ai-workflow-automation-lite
 */
 
 // Exit if accessed directly
@@ -58,13 +57,18 @@ define( 'WP_AI_WORKFLOWS_LOADED', __FILE__ );
  */
 if ( ! function_exists( 'wp_ai_workflows_handle_error' ) ) {
 
-// Custom error handler for initialization
+// Bootstrap-only error handler: labels our own notices/warnings for support
+// triage without touching anyone else's. Scoped in time by restore_error_handler()
+// below, and in space to files under this plugin's own directory. Always
+// returns false so PHP's normal handling (and WordPress's own) still runs.
 function wp_ai_workflows_handle_error( $errno, $errstr, $errfile, $errline ) {
 	if ( ! ( error_reporting() & $errno ) ) {
 		return false;
 	}
-	error_log( sprintf( 'WP AI Workflows Error: %s in %s on line %d', $errstr, $errfile, $errline ) );
-	return true;
+	if ( strncmp( $errfile, __DIR__ . DIRECTORY_SEPARATOR, strlen( __DIR__ ) + 1 ) === 0 ) {
+		error_log( sprintf( 'WP AI Workflows Error: %s in %s on line %d', $errstr, $errfile, $errline ) );
+	}
+	return false;
 }
 set_error_handler( 'wp_ai_workflows_handle_error' );
 
@@ -88,7 +92,7 @@ spl_autoload_register(
 );
 
 
-define( 'WP_AI_WORKFLOWS_PRO_VERSION', '2.0.8' );
+define( 'WP_AI_WORKFLOWS_PRO_VERSION', '2.0.9' );
 define( 'WP_AI_WORKFLOWS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_AI_WORKFLOWS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'WP_AI_WORKFLOWS_PLUGIN_FILE', __FILE__ );
@@ -120,11 +124,11 @@ $required_files = array(
 	'ai-router',
 	'workflow-translator',
 	'platform-callback',
+	'site-step',
 	'rest-api',
 	'shortcode',
 	'license',
 	'license-security',
-	'updater',
 	'wporg-migration',
 	'human-tasks',
 	'firecrawl',
@@ -170,6 +174,13 @@ foreach ( $required_files as $file ) {
 }
 require_once WP_AI_WORKFLOWS_PLUGIN_DIR . 'admin/class-wp-ai-workflows-admin.php';
 
+// Self-update is for the self-hosted build only; the directory build omits this file.
+$wp_ai_workflows_updater_file = WP_AI_WORKFLOWS_PLUGIN_DIR . 'includes/class-wp-ai-workflows-updater.php';
+if ( file_exists( $wp_ai_workflows_updater_file ) ) {
+	require_once $wp_ai_workflows_updater_file;
+}
+unset( $wp_ai_workflows_updater_file );
+
 
 /**
  * Plugin activation
@@ -214,7 +225,7 @@ function activate_wp_ai_workflows() {
 				),
 				'permalinks'        => get_option( 'permalink_structure' ),
 				'rest_enabled'      => get_option( 'permalink_structure' ) !== '',
-				'htaccess_writable' => is_writable( ABSPATH . '.htaccess' ),
+				'htaccess_writable' => wp_is_writable( ABSPATH . '.htaccess' ),
 				'rest_base'         => rest_get_url_prefix(),
 			)
 		);
@@ -462,13 +473,16 @@ function run_wp_ai_workflows() {
 
 		WP_AI_Workflows_Encryption::init();
 		WP_AI_Workflows_Platform_Client::init();
+		WP_AI_Workflows_Site_Step::init();
 
 		// Phase 3 (R6.1/R6.5): free-first. The plugin ALWAYS initializes full
 		// functionality - the SLM license no longer gates the plugin, and no
 		// license phone-home runs on load (wp.org Guideline 6). Premium/Cloud
 		// features gate on platform connection state, not a license. The license
 		// classes remain as a dormant fallback but are not consulted here.
-		WP_AI_Workflows_Updater::get_instance();
+		if ( class_exists( 'WP_AI_Workflows_Updater' ) ) {
+			WP_AI_Workflows_Updater::get_instance();
+		}
 		WP_AI_Workflows_WPOrg_Migration::get_instance();
 		initialize_full_functionality( $license );
 
@@ -590,6 +604,7 @@ add_action(
 	}
 );
 add_action( 'wp_ai_workflows_cleanup_chat_data', array( 'WP_AI_Workflows_Database', 'cleanup_old_chat_data' ) );
+add_action( 'wp_ai_workflows_cleanup', array( 'WP_AI_Workflows_Database', 'cleanup_site_steps' ) );
 add_action( 'wp_ai_workflows_cleanup_assistant_chat', array( 'WP_AI_Workflows_Assistant_Setup', 'cleanup_old_data' ) );
 add_action( 'wp_ai_workflows_daily_maintenance', array( 'WP_AI_Workflows_Assistant_Chat', 'cleanup_old_data' ) );
 add_action(
@@ -854,7 +869,7 @@ function wp_ai_workflows_setup_files() {
 		foreach ( $directories as $dir ) {
 			$path = WP_AI_WORKFLOWS_PLUGIN_DIR . $dir;
 			if ( ! file_exists( $path ) ) {
-				if ( ! mkdir( $path, 0755, true ) && ! is_dir( $path ) ) {
+				if ( ! wp_mkdir_p( $path ) ) {
 					throw new \RuntimeException( sprintf( 'Directory "%s" was not created', $path ) );
 				}
 			}

@@ -6,6 +6,7 @@
   "capabilities": ["display result", "save to database", "shortcode/HTML", "webhook delivery", "Google Sheets", "Google Drive"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "either",
   "config": [
     { "name": "outputType", "type": "enum", "required": true, "default": "display",
       "options": ["display", "save", "html", "webhook", "googleSheets", "googleDrive"],

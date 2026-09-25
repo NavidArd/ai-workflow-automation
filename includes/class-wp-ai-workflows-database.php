@@ -39,8 +39,9 @@ class WP_AI_Workflows_Database {
 		$workflows_table          = $wpdb->prefix . 'wp_ai_workflows_workflow_data';
 		$mcp_servers_table        = $wpdb->prefix . 'wp_ai_workflows_mcp_servers';
 
-		$sql_workflows = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_workflows = self::prepare_create_table(
+			$workflows_table,
+			"
 				id VARCHAR(255) NOT NULL,
 				name VARCHAR(255) NOT NULL,
 				status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -53,12 +54,13 @@ class WP_AI_Workflows_Database {
 				KEY status (status),
 				KEY created_at (created_at),
 				KEY updated_at (updated_at)
-			) " . $charset_collate,
-			$workflows_table
+			",
+			$charset_collate
 		);
 
-		$sql_license_security = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_license_security = self::prepare_create_table(
+			$license_security_table,
+			"
 				id BIGINT(20) NOT NULL AUTO_INCREMENT,
 				check_time DATETIME NOT NULL,
 				check_type VARCHAR(50) NOT NULL,
@@ -73,12 +75,13 @@ class WP_AI_Workflows_Database {
 				KEY check_time (check_time),
 				KEY result (result),
 				KEY site_hash (site_hash)
-			) " . $charset_collate,
-			$license_security_table
+			",
+			$charset_collate
 		);
 
-		$sql_shortcode_outputs = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_shortcode_outputs = self::prepare_create_table(
+			$shortcode_outputs_table,
+			"
 				id INT NOT NULL AUTO_INCREMENT,
 				session_id VARCHAR(255) NOT NULL,
 				workflow_id VARCHAR(255) NOT NULL,
@@ -87,23 +90,26 @@ class WP_AI_Workflows_Database {
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY session_workflow (session_id, workflow_id)
-			) " . $charset_collate,
-			$shortcode_outputs_table
+			",
+			$charset_collate
 		);
 
-		$sql_outputs = $wpdb->prepare(
-			"CREATE TABLE %i (
+		$sql_outputs = self::prepare_create_table(
+			$outputs_table,
+			"
 				id mediumint(9) NOT NULL AUTO_INCREMENT,
 				node_id varchar(255) NOT NULL,
 				output_data longtext NOT NULL,
 				created_at datetime DEFAULT CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id)
-			) " . $charset_collate,
-			$outputs_table
+			",
+			$charset_collate,
+			false
 		);
 
-		$sql_executions = $wpdb->prepare(
-			"CREATE TABLE %i (
+		$sql_executions = self::prepare_create_table(
+			$executions_table,
+			"
 				id mediumint(9) NOT NULL AUTO_INCREMENT,
 				workflow_id varchar(255) NOT NULL,
 				workflow_name varchar(255) NOT NULL,
@@ -118,12 +124,14 @@ class WP_AI_Workflows_Database {
 				updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				scheduled_at datetime,
 				PRIMARY KEY  (id)
-			) " . $charset_collate,
-			$executions_table
+			",
+			$charset_collate,
+			false
 		);
 
-		$sql_templates = $wpdb->prepare(
-			"CREATE TABLE %i (
+		$sql_templates = self::prepare_create_table(
+			$templates_table,
+			"
 				id mediumint(9) NOT NULL AUTO_INCREMENT,
 				name varchar(255) NOT NULL,
 				description text,
@@ -131,12 +139,14 @@ class WP_AI_Workflows_Database {
 				created_at datetime DEFAULT CURRENT_TIMESTAMP,
 				updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY  (id)
-			) " . $charset_collate,
-			$templates_table
+			",
+			$charset_collate,
+			false
 		);
 
-		$sql_human_tasks = $wpdb->prepare(
-			"CREATE TABLE %i (
+		$sql_human_tasks = self::prepare_create_table(
+			$human_tasks_table,
+			"
 				id bigint(20) NOT NULL AUTO_INCREMENT,
 				workflow_id varchar(255) NOT NULL,
 				workflow_name varchar(255) NOT NULL,
@@ -159,12 +169,14 @@ class WP_AI_Workflows_Database {
 				KEY assigned_user_id (assigned_user_id),
 				KEY assigned_role (assigned_role),
 				KEY status (status)
-			) " . $charset_collate,
-			$human_tasks_table
+			",
+			$charset_collate,
+			false
 		);
 
-		$sql_google_sheet_states = $wpdb->prepare(
-			"CREATE TABLE %i (
+		$sql_google_sheet_states = self::prepare_create_table(
+			$google_sheet_states,
+			"
 				id bigint(20) NOT NULL AUTO_INCREMENT,
 				sheet_id varchar(255) NOT NULL,
 				tab_id varchar(255) NOT NULL,
@@ -172,12 +184,14 @@ class WP_AI_Workflows_Database {
 				updated_at datetime NOT NULL,
 				PRIMARY KEY  (id),
 				UNIQUE KEY sheet_tab (sheet_id,tab_id)
-			) " . $charset_collate,
-			$google_sheet_states
+			",
+			$charset_collate,
+			false
 		);
 
-		$sql_sessions = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_sessions = self::prepare_create_table(
+			$sessions_table,
+			"
 				id BIGINT(20) NOT NULL AUTO_INCREMENT,
 				session_id VARCHAR(255) NOT NULL,
 				workflow_id VARCHAR(255) NOT NULL,
@@ -188,12 +202,13 @@ class WP_AI_Workflows_Database {
 				UNIQUE KEY session_id (session_id),
 				KEY workflow_id (workflow_id),
 				KEY updated_at (updated_at)
-			) " . $charset_collate,
-			$sessions_table
+			",
+			$charset_collate
 		);
 
-		$sql_messages = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_messages = self::prepare_create_table(
+			$messages_table,
+			"
 				id BIGINT(20) NOT NULL AUTO_INCREMENT,
 				session_id VARCHAR(255) NOT NULL,
 				role ENUM('system', 'user', 'assistant') NOT NULL,
@@ -204,12 +219,13 @@ class WP_AI_Workflows_Database {
 				PRIMARY KEY (id),
 				KEY session_id (session_id),
 				KEY created_at (created_at)
-			) " . $charset_collate,
-			$messages_table
+			",
+			$charset_collate
 		);
 
-		$sql_node_costs = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_node_costs = self::prepare_create_table(
+			$node_costs_table,
+			"
 				id BIGINT(20) NOT NULL AUTO_INCREMENT,
 				execution_id BIGINT(20) NOT NULL,
 				node_id VARCHAR(255) NOT NULL,
@@ -223,12 +239,13 @@ class WP_AI_Workflows_Database {
 				KEY execution_node (execution_id, node_id),
 				KEY model_idx (model),
 				KEY provider_idx (provider)
-			) " . $charset_collate,
-			$node_costs_table
+			",
+			$charset_collate
 		);
 
-		$sql_cost_settings = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_cost_settings = self::prepare_create_table(
+			$cost_settings_table,
+			"
 				id BIGINT(20) NOT NULL AUTO_INCREMENT,
 				provider VARCHAR(50) NOT NULL,
 				model VARCHAR(255) NOT NULL,
@@ -237,12 +254,13 @@ class WP_AI_Workflows_Database {
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				UNIQUE KEY provider_model (provider, model)
-			) " . $charset_collate,
-			$cost_settings_table
+			",
+			$charset_collate
 		);
 
-		$sql_assistant_sessions = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_assistant_sessions = self::prepare_create_table(
+			$assistant_sessions_table,
+			"
 				session_id varchar(36) NOT NULL,
 				workflow_id varchar(255) NOT NULL,
 				workflow_context longtext,
@@ -253,12 +271,13 @@ class WP_AI_Workflows_Database {
 				PRIMARY KEY (session_id),
 				KEY workflow_id (workflow_id),
 				KEY mode (mode)
-			) " . $charset_collate,
-			$assistant_sessions_table
+			",
+			$charset_collate
 		);
 
-		$sql_assistant_messages = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_assistant_messages = self::prepare_create_table(
+			$assistant_messages_table,
+			"
 				message_id bigint(20) NOT NULL AUTO_INCREMENT,
 				session_id varchar(36) NOT NULL,
 				role varchar(20) NOT NULL,
@@ -269,12 +288,13 @@ class WP_AI_Workflows_Database {
 				PRIMARY KEY (message_id),
 				KEY session_id (session_id),
 				KEY message_ordering (session_id, created_at)
-			) " . $charset_collate,
-			$assistant_messages_table
+			",
+			$charset_collate
 		);
 
-		$sql_vector_stores = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_vector_stores = self::prepare_create_table(
+			$vector_stores_table,
+			"
 				id VARCHAR(255) NOT NULL,
 				name VARCHAR(255) NOT NULL,
 				description TEXT,
@@ -282,12 +302,13 @@ class WP_AI_Workflows_Database {
 				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id)
-			) " . $charset_collate,
-			$vector_stores_table
+			",
+			$charset_collate
 		);
 
-		$sql_vector_files = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_vector_files = self::prepare_create_table(
+			$vector_files_table,
+			"
 				id VARCHAR(255) NOT NULL,
 				store_id VARCHAR(255) NOT NULL,
 				filename VARCHAR(255) NOT NULL,
@@ -300,12 +321,13 @@ class WP_AI_Workflows_Database {
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				PRIMARY KEY (id),
 				KEY store_id (store_id)
-			) " . $charset_collate,
-			$vector_files_table
+			",
+			$charset_collate
 		);
 
-		$sql_mcp_servers = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
+		$sql_mcp_servers = self::prepare_create_table(
+			$mcp_servers_table,
+			"
 				id mediumint(9) NOT NULL AUTO_INCREMENT,
 				user_id bigint(20) NOT NULL,
 				name varchar(255) NOT NULL,
@@ -320,8 +342,8 @@ class WP_AI_Workflows_Database {
 				KEY name (name),
 				KEY is_active (is_active),
 				KEY created_at (created_at)
-			) " . $charset_collate,
-			$mcp_servers_table
+			",
+			$charset_collate
 		);
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -354,6 +376,7 @@ class WP_AI_Workflows_Database {
 		}
 
 		self::ensure_metadata_column();
+		self::ensure_site_steps_table( true );
 
 		update_option( 'wp_ai_workflows_chat_db_version', WP_AI_WORKFLOWS_PRO_VERSION );
 
@@ -464,8 +487,28 @@ class WP_AI_Workflows_Database {
 		foreach ( $data as $row ) {
 			fputcsv( $df, $row );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- php://output stream, not a filesystem write
 		fclose( $df );
 		return ob_get_clean();
+	}
+
+	/**
+	 * Build a CREATE TABLE statement with the table name prepared as an identifier.
+	 *
+	 * @param string $table           Table name.
+	 * @param string $body            Column and key definitions between the parens.
+	 * @param string $charset_collate Value from $wpdb->get_charset_collate().
+	 * @param bool   $if_not_exists   Whether to include IF NOT EXISTS.
+	 * @return string
+	 */
+	private static function prepare_create_table( $table, $body, $charset_collate, $if_not_exists = true ) {
+		global $wpdb;
+		if ( $if_not_exists ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- body is a literal from the caller and charset comes from $wpdb->get_charset_collate().
+			return $wpdb->prepare( "CREATE TABLE IF NOT EXISTS %i ({$body}) {$charset_collate}", $table );
+		}
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- body is a literal from the caller and charset comes from $wpdb->get_charset_collate().
+		return $wpdb->prepare( "CREATE TABLE %i ({$body}) {$charset_collate}", $table );
 	}
 
 	public static function create_table( $request ) {
@@ -720,6 +763,101 @@ class WP_AI_Workflows_Database {
 		}
 	}
 
+	/** Option flag recording that the site-step table is present at this revision. */
+	const SITE_STEPS_SCHEMA_OPTION = 'wpaw_site_steps_schema';
+
+	/** Bumped when the site-step table definition changes. */
+	const SITE_STEPS_SCHEMA_VERSION = '3';
+
+	/** Days a site-step record is kept before the cleanup cron removes it. */
+	const SITE_STEPS_RETENTION_DAYS = 7;
+
+	/**
+	 * Fully-qualified name of the site-step correlation table.
+	 *
+	 * @return string
+	 */
+	public static function site_steps_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'wp_ai_workflows_site_steps';
+	}
+
+	/**
+	 * Create the site-step correlation table if it is not already present. Cheap to
+	 * call on every request: an option read short-circuits once the table exists.
+	 *
+	 * @param bool $force Skip the option short-circuit and run dbDelta anyway.
+	 * @return void
+	 */
+	public static function ensure_site_steps_table( $force = false ) {
+		if ( ! $force && self::SITE_STEPS_SCHEMA_VERSION === get_option( self::SITE_STEPS_SCHEMA_OPTION, '' ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$table           = self::site_steps_table();
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = self::prepare_create_table(
+			$table,
+			"
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				step_id varchar(64) NOT NULL,
+				platform_execution_id varchar(64) NOT NULL,
+				workflow_name varchar(191) DEFAULT NULL,
+				node_id varchar(255) NOT NULL,
+				node_type varchar(64) NOT NULL,
+				mode varchar(8) NOT NULL DEFAULT 'sync',
+				status varchar(16) NOT NULL DEFAULT 'received',
+				result_ref varchar(255) DEFAULT NULL,
+				error_code varchar(64) DEFAULT NULL,
+				error_message text,
+				duration_ms int unsigned DEFAULT NULL,
+				delivered_at datetime DEFAULT NULL,
+				delivery_attempts smallint unsigned NOT NULL DEFAULT 0,
+				delivery_error varchar(190) DEFAULT NULL,
+				delivery_payload mediumtext,
+				created_at datetime DEFAULT CURRENT_TIMESTAMP,
+				updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				PRIMARY KEY  (id),
+				UNIQUE KEY step_id (step_id),
+				KEY platform_execution_id (platform_execution_id),
+				KEY status (status),
+				KEY created_at (created_at)
+			",
+			$charset_collate,
+			false
+		);
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		dbDelta( $sql );
+
+		update_option( self::SITE_STEPS_SCHEMA_OPTION, self::SITE_STEPS_SCHEMA_VERSION, false );
+	}
+
+	/**
+	 * Drop site-step records past their retention window. Hooked to the existing
+	 * daily cleanup cron.
+	 *
+	 * @return void
+	 */
+	public static function cleanup_site_steps() {
+		if ( self::SITE_STEPS_SCHEMA_VERSION !== get_option( self::SITE_STEPS_SCHEMA_OPTION, '' ) ) {
+			return;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- scheduled retention sweep.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM %i WHERE created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL %d DAY)",
+				self::site_steps_table(),
+				self::SITE_STEPS_RETENTION_DAYS
+			)
+		);
+	}
+
 	public static function verify_tables_exist() {
 		global $wpdb;
 		$required_tables = array(
@@ -788,8 +926,9 @@ class WP_AI_Workflows_Database {
 		global $wpdb;
 		$charset_collate = $wpdb->get_charset_collate();
 		$required_tables = array(
-			'wp_ai_workflows_cost_settings'      => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_cost_settings'      => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_cost_settings',
+				"
 					id BIGINT(20) NOT NULL AUTO_INCREMENT,
 					provider VARCHAR(50) NOT NULL,
 					model VARCHAR(255) NOT NULL,
@@ -798,11 +937,12 @@ class WP_AI_Workflows_Database {
 					updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 					PRIMARY KEY (id),
 					UNIQUE KEY provider_model (provider, model)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_cost_settings'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_node_costs'         => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_node_costs'         => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_node_costs',
+				"
 					id BIGINT(20) NOT NULL AUTO_INCREMENT,
 					execution_id BIGINT(20) NOT NULL,
 					node_id VARCHAR(255) NOT NULL,
@@ -816,11 +956,12 @@ class WP_AI_Workflows_Database {
 					KEY execution_node (execution_id, node_id),
 					KEY model_idx (model),
 					KEY provider_idx (provider)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_node_costs'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_executions'         => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_executions'         => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_executions',
+				"
 					id mediumint(9) NOT NULL AUTO_INCREMENT,
 					workflow_id varchar(255) NOT NULL,
 					workflow_name varchar(255) NOT NULL,
@@ -835,11 +976,12 @@ class WP_AI_Workflows_Database {
 					updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 					scheduled_at datetime,
 					PRIMARY KEY  (id)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_executions'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_assistant_messages' => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_assistant_messages' => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_assistant_messages',
+				"
 					message_id bigint(20) NOT NULL AUTO_INCREMENT,
 					session_id varchar(36) NOT NULL,
 					role varchar(20) NOT NULL,
@@ -850,11 +992,12 @@ class WP_AI_Workflows_Database {
 					PRIMARY KEY (message_id),
 					KEY session_id (session_id),
 					KEY message_ordering (session_id, created_at)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_assistant_messages'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_assistant_sessions' => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_assistant_sessions' => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_assistant_sessions',
+				"
 					session_id varchar(36) NOT NULL,
 					workflow_id varchar(255) NOT NULL,
 					workflow_context longtext,
@@ -865,11 +1008,12 @@ class WP_AI_Workflows_Database {
 					PRIMARY KEY (session_id),
 					KEY workflow_id (workflow_id),
 					KEY mode (mode)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_assistant_sessions'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_vector_stores'      => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_vector_stores'      => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_vector_stores',
+				"
 					id VARCHAR(255) NOT NULL,
 					name VARCHAR(255) NOT NULL,
 					description TEXT,
@@ -877,11 +1021,12 @@ class WP_AI_Workflows_Database {
 					created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 					updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 					PRIMARY KEY (id)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_vector_stores'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_vector_files'       => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_vector_files'       => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_vector_files',
+				"
 					id VARCHAR(255) NOT NULL,
 					store_id VARCHAR(255) NOT NULL,
 					filename VARCHAR(255) NOT NULL,
@@ -894,11 +1039,12 @@ class WP_AI_Workflows_Database {
 					updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 					PRIMARY KEY (id),
 					KEY store_id (store_id)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_vector_files'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_license_security'   => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_license_security'   => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_license_security',
+				"
 					id BIGINT(20) NOT NULL AUTO_INCREMENT,
 					check_time DATETIME NOT NULL,
 					check_type VARCHAR(50) NOT NULL,
@@ -913,11 +1059,12 @@ class WP_AI_Workflows_Database {
 					KEY check_time (check_time),
 					KEY result (result),
 					KEY site_hash (site_hash)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_license_security'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_workflow_data'      => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_workflow_data'      => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_workflow_data',
+				"
 					id VARCHAR(255) NOT NULL,
 					name VARCHAR(255) NOT NULL,
 					status VARCHAR(20) NOT NULL DEFAULT 'active',
@@ -930,11 +1077,12 @@ class WP_AI_Workflows_Database {
 					KEY status (status),
 					KEY created_at (created_at),
 					KEY updated_at (updated_at)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_workflow_data'
+				",
+				$charset_collate
 			),
-			'wp_ai_workflows_mcp_servers'        => $wpdb->prepare(
-				"CREATE TABLE IF NOT EXISTS %i (
+			'wp_ai_workflows_mcp_servers'        => self::prepare_create_table(
+				$wpdb->prefix . 'wp_ai_workflows_mcp_servers',
+				"
 					id mediumint(9) NOT NULL AUTO_INCREMENT,
 					user_id bigint(20) NOT NULL,
 					name varchar(255) NOT NULL,
@@ -949,8 +1097,8 @@ class WP_AI_Workflows_Database {
 					KEY name (name),
 					KEY is_active (is_active),
 					KEY created_at (created_at)
-				) " . $charset_collate,
-				$wpdb->prefix . 'wp_ai_workflows_mcp_servers'
+				",
+				$charset_collate
 			)
 		);
 

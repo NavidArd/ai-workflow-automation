@@ -6,6 +6,8 @@
   "capabilities": ["PDF generation", "templated documents", "custom HTML to PDF", "invoice/report/letter/certificate/proposal rendering"],
   "modes": ["local"],
   "credits": 2,
+  "locus": "site",
+  "siteStepMode": "async",
   "config": [
     { "name": "sourceMode", "type": "enum", "required": true, "default": "template",
       "options": ["template", "custom"], "description": "Choose a built-in template or render your own custom HTML/CSS." },

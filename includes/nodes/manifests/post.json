@@ -6,6 +6,7 @@
   "capabilities": ["create/update posts", "custom post types", "WooCommerce products", "ACF and custom fields", "scheduling"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "site",
   "config": [
     { "name": "selectedPostType", "type": "string", "required": true, "description": "Post type slug (post, page, product, custom)." },
     { "name": "postStatus", "type": "enum", "required": false, "default": "draft",

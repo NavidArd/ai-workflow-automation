@@ -6,6 +6,7 @@
   "capabilities": ["for-each iteration", "fixed count", "while condition", "output accumulation", "safe iteration cap"],
   "modes": ["local", "cloud"],
   "credits": 0,
+  "locus": "cloud",
   "config": [
     { "name": "loopType", "type": "enum", "required": true, "default": "forEach",
       "options": ["forEach", "count", "while"], "description": "Iteration strategy." },

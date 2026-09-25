@@ -8,7 +8,7 @@
  * @package WP_AI_Workflows
  */
 
-if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_AI_WORKFLOWS_AGENT_TEST' ) ) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -79,7 +79,7 @@ class WP_AI_Workflows_Agent_Tool_Registry {
 				KEY session_id (session_id),
 				KEY workflow_id (workflow_id),
 				KEY created_at (created_at)
-			) " . $charset_collate,
+			) " . $charset_collate, // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name is passed as %i; charset comes from $wpdb->get_charset_collate().
 			$this->table
 		);
 

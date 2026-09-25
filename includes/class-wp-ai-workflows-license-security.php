@@ -26,15 +26,23 @@ class WP_AI_Workflows_License_Security {
 	public static function init() {
 		add_action( 'admin_init', array( __CLASS__, 'verify_environment' ) );
 
-		if ( ! wp_next_scheduled( 'wp_ai_workflows_license_verify' ) ) {
-			wp_schedule_event( time() + rand( 600, 3600 ), 'twicedaily', 'wp_ai_workflows_license_verify' );
-		}
+		// wp_rand is pluggable and not yet defined at plugin-include time
+		// (wp-settings.php loads active plugins before wp-includes/pluggable.php),
+		// so the schedule check runs on `init` instead of here.
+		add_action( 'init', array( __CLASS__, 'maybe_schedule_verification' ) );
 		add_action( 'wp_ai_workflows_license_verify', array( __CLASS__, 'scheduled_verification' ) );
 
 		// Hook into HTTP requests to detect tampering
 		add_filter( 'pre_http_request', array( __CLASS__, 'pre_http_request_check' ), 9, 3 );
 
 		add_action( 'wp_ai_workflows_post_license_check', array( __CLASS__, 'maybe_migrate_license_data' ) );
+	}
+
+
+	public static function maybe_schedule_verification() {
+		if ( ! wp_next_scheduled( 'wp_ai_workflows_license_verify' ) ) {
+			wp_schedule_event( time() + wp_rand( 600, 3600 ), 'twicedaily', 'wp_ai_workflows_license_verify' );
+		}
 	}
 
 
@@ -114,7 +122,7 @@ class WP_AI_Workflows_License_Security {
 		update_option( 'wp_ai_workflows_lic_' . bin2hex( random_bytes( 4 ) ), bin2hex( random_bytes( 8 ) ), 'no' );
 
 		// Store a verification time with random offset
-		update_option( $keys['verification'], time() + rand( -300, 300 ), 'no' );
+		update_option( $keys['verification'], time() + wp_rand( -300, 300 ), 'no' );
 
 		WP_AI_Workflows_Utilities::debug_log( 'License state securely stored', 'debug' );
 
@@ -247,7 +255,7 @@ class WP_AI_Workflows_License_Security {
 			return;
 		}
 		// Only run occasionally to reduce overhead
-		if ( rand( 1, 10 ) !== 1 ) {
+		if ( wp_rand( 1, 10 ) !== 1 ) {
 			return;
 		}
 
@@ -296,7 +304,7 @@ class WP_AI_Workflows_License_Security {
 		$state_valid = self::verify_license_state();
 
 		// Only perform interception check occasionally
-		$no_interception = ( rand( 1, 5 ) !== 1 ) || ! self::detect_http_interception();
+		$no_interception = ( wp_rand( 1, 5 ) !== 1 ) || ! self::detect_http_interception();
 
 		if ( $is_active && ( ! $state_valid || ! $no_interception ) ) {
 			WP_AI_Workflows_Utilities::debug_log(
@@ -309,7 +317,7 @@ class WP_AI_Workflows_License_Security {
 				)
 			);
 
-			if ( rand( 1, 3 ) === 1 ) {
+			if ( wp_rand( 1, 3 ) === 1 ) {
 				self::scheduled_verification();
 			}
 		}
